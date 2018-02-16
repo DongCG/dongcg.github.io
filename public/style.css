@@ -1,0 +1,20 @@
+body{
+    background-color: aquamarine;
+}
+
+a{
+    text-decoration: none;
+}
+
+.box{
+    margin: auto;
+    width: 1200px;
+}
+
+.menuItem:hover{
+    color:red
+}
+.listitem:hover{
+    color:red;
+    font-weight: bold;
+}
