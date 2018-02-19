@@ -24,6 +24,12 @@
 
 	"APPS": [
 		{ 
+			"name":"TankWar.exe", 
+			"date":"2018/02/19",
+			"size":"289KB",
+			"desc":"本遊戲和SeaWar類似，共5關，同樣有本地計分排名系統，畫面精美，歡迎下載。"
+		},
+		{ 
 			"name":"SeaWar1.exe", 
 			"date":"2018/02/19",
 			"size":"286KB",
