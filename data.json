@@ -1,9 +1,9 @@
 { 
 	"NEWS": [
 		{ 
-			"title": "Metropolis算法程式上線", 
+			"title": "Metropolis-1程式上線", 
 			"date":"2018/05/12",
-			"content": "將Metropolis-Hastings算法代碼化，同時引進了進度條"
+			"content": "將Metropolis-Hastings算法代碼化，同時引進了進度條。"
 		},
 		{ 
 			"title": "大壩與蟻穴-5上線", 
@@ -54,7 +54,7 @@
 
 	"APPS": [
 		{ 
-			"name":"Metropolis.jar", 
+			"name":"Metropolis-1.jar", 
 			"date":"2018/05/12",
 			"size":"24.2KB",
 			"desc":"本程式模擬了一個邊長為20的容納著200個L-J粒子的立方體系統，通過模擬馬爾科夫鏈，結合Metropolis-Hastings準則，對體系L-J勢能進行了模擬計算。系統的對比溫度為4。樣本數越多，馬爾科夫鏈就越長，導致最終馬爾科夫鏈上的鏈結點————樣本 的分佈就越接近於Boltzmann分佈，平均能量就越收斂，更接近于真實值。（根據測試，樣本數取值至少10萬左右才具有有效性）"
