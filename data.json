@@ -54,6 +54,18 @@
 
 	"APPS": [
 		{ 
+			"name":"JAVA3D书本案例2.jar", 
+			"date":"2018/06/15",
+			"size":"2.24MB",
+			"desc":"绘制了曲面 z = 2cos(x^2)sin(y^2)/e^(0.25*(x^2+y^2))-1"
+		},
+		{ 
+			"name":"JAVA3D书本案例1.jar", 
+			"date":"2018/06/15",
+			"size":"2.24MB",
+			"desc":"绘制了几个旋转的立体图形"
+		},
+		{ 
 			"name":"Metropolis-2.jar", 
 			"date":"2018/05/12",
 			"size":"6.23KB",
