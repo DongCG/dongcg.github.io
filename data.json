@@ -1,11 +1,6 @@
 { 
 	"NEWS": [
 		{ 
-			"title": "回复", 
-			"date":"2018/07/29",
-			"content": "那就十一过来吧，顺便把那本Linux书也带过来。"
-		},
-		{ 
 			"title": "Metropolis程式上線", 
 			"date":"2018/05/12",
 			"content": "將Metropolis-Hastings算法代碼化，同時引進了進度條。三代產品目前正在研發中，可以實現文件的輸出，便於在Origin等繪圖軟件中繪出Bolzmann分佈圖，目前遇挫。"
