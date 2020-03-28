@@ -3,5 +3,15 @@
 		"name":"CFWeather",
 		"label":"晨风天气",
 		"version":1.0
+	},
+	{
+		"name":"Weight",
+		"label":"体重记录",
+		"version":1.0
+	},
+	{
+		"name":"Diary",
+		"label":"我的日记",
+		"version":1.0
 	}
 ]
