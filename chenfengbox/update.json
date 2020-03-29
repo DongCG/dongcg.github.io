@@ -1,13 +1,13 @@
 [
 	{
-		"name":"CFWeather",
-		"label":"晨风天气",
+		"name":"Weather",
+		"label":"天气助手",
 		"version":1.0
 	},
 	{
 		"name":"Weight",
 		"label":"体重记录",
-		"version":1.1
+		"version":1.0
 	},
 	{
 		"name":"Diary",
