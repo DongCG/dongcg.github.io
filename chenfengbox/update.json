@@ -13,5 +13,10 @@
 		"name":"Diary",
 		"label":"我的日记",
 		"version":1.0
+	},
+	{
+		"name":"TodoList",
+		"label":"待办箱",
+		"version":1.0
 	}
 ]
