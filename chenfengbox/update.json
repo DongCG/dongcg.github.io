@@ -23,5 +23,10 @@
 		"name":"Search",
 		"label":"检索助手",
 		"version":1.0
+	},
+	{
+		"name":"PlanList",
+		"label":"我的计划",
+		"version":1.0
 	}
 ]
