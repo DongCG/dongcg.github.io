@@ -1,4 +1,4 @@
-global.DATA = { 
+const mydata = { 
 	"NEWS": [
 		{
 			"title": "晨风百宝箱项目入驻",
