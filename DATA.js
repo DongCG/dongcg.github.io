@@ -66,7 +66,7 @@ const mydata = {
 		{
 			"name":"Rater.jar",
 			"date":"2020/04/08",
-			"size":"32.8KB",
+			"size":"38.7KB",
 			"pic":"rater.png",
 			"desc":"利率计算器，计算某持有基金当下卖出时的服务费、平均年化利率和总收益率，方便快捷"
 		},
