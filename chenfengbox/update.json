@@ -17,7 +17,7 @@
 	{
 		"name":"TodoList",
 		"label":"待办箱",
-		"version":1.2
+		"version":1.1
 	},
 	{
 		"name":"Search",
@@ -28,5 +28,11 @@
 		"name":"PlanList",
 		"label":"我的计划",
 		"version":1.0
+	},
+	{
+		"name":"Campus",
+		"label":"工作园区",
+		"version":1.0,
+		"type":"h5"
 	}
 ]
