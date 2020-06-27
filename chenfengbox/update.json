@@ -34,5 +34,11 @@
 		"label":"工作园区",
 		"version":1.0,
 		"type":"h5"
+	},
+	{
+		"name":"Vegetable",
+		"label":"菜篮子",
+		"version":0.1,
+		"type":"h5"
 	}
 ]
