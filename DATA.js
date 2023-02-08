@@ -77,7 +77,7 @@ const mydata = {
 			"name":"Deskball.jar",
 			"date":"2023/02/08",
 			"size":"40 KB",
-			"pic":"Deskball.png",
+			"pic":"deskball.png",
 			"desc":"利用物理定律复现了弹性小球的非对心碰撞"
 		},
 		{
