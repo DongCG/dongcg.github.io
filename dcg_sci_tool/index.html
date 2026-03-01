@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>dcg_sci_tool API documentation</title>
+<meta name="description" content="dcg-sci-tool is a Python package that provides utility functions for scientific computing. It includes functions for summing numbers to a target value …">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Package <code>dcg_sci_tool</code></h1>
+</header>
+<section id="section-intro">
+<p>dcg-sci-tool is a Python package that provides utility functions for scientific computing. It includes functions for summing numbers to a target value and extracting atom types from molecular data. This package is designed to be easy to use and integrate into various scientific workflows.</p>
+</section>
+<section>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+<dl>
+<dt><code class="name"><a title="dcg_sci_tool.cli" href="cli.html">dcg_sci_tool.cli</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="dcg_sci_tool.detect_CO_CO2_molecules"><code class="name flex">
+<span>def <span class="ident">detect_CO_CO2_molecules</span></span>(<span>data, type_names_order)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_CO_CO2_molecules(data, type_names_order):
+    &#34;&#34;&#34;
+    识别当前帧中的CO和CO2分子，返回当前帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。
+
+    Args:
+
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+    Returns:
+
+        tuple: CO和CO2分子信息
+
+            CO_amount (int): CO分子数量
+
+            CO2_amount (int): CO2分子数量
+
+            CO_atoms_indexes (list): CO分子中所有原子的序号列表
+
+            CO2_atoms_indexes (list): CO2分子中所有原子的序号列表
+
+            co_molecules (list): CO分子列表，每个元素是一个元组，包含C原子序号和O原子序号
+
+            co2_molecules (list): CO2分子列表，每个元素是一个元组，包含C原子序号和两个O原子序号
+            
+    &#34;&#34;&#34;
+    cutoff = 1.5  # C-O成键距离，单位为Å
+    particles = data.particles
+    if particles is None:
+        return 0, 0, [], [], []
+    
+    # 获取原子类型
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    # 计算邻居列表
+    num_atoms = particles.count
+    finder = CutoffNeighborFinder(cutoff, data)
+    neighbors = {i: [] for i in range(num_atoms)}
+    for i in range(num_atoms):
+        for neighbor in finder.find(i):
+            neighbors[i].append(neighbor.index)
+    
+    # 计算当前帧的 CO₂ 和 CO
+    CO2_amount = 0
+    CO_amount = 0
+    CO_atoms_indexes = []
+    CO2_atoms_indexes = []
+    co_molecules = []  # 存储所有CO分子（C-O对）
+    co2_molecules = [] # 存储所有CO2分子（C-O-O三元组）
+    
+    for i in range(num_atoms):
+        if symbols[i] != &#39;C&#39;:
+            continue
+        
+        # 找到与C原子成键的O原子
+        bonded_O = [j for j in neighbors[i] if symbols[j] == &#39;O&#39;]
+        N_CN_O = len(bonded_O)
+        
+        if N_CN_O == 2:
+            # CO2分子：C原子与2个O原子成键
+            CO2_atoms_indexes.extend([i] + bonded_O)# 每个CO2分子第一个原子是C原子，第二、三个原子是O原子
+            CO2_amount += 1
+            co2_molecules.append((i, bonded_O[0], bonded_O[1])) # 存储CO2分子信息
+        elif N_CN_O == 1:
+            # CO分子：C原子与1个O原子成键
+            CO_atoms_indexes.extend([i] + bonded_O) # 每个CO分子第一个原子是C原子，第二个原子是O原子
+            CO_amount += 1
+            co_molecules.append((i, bonded_O[0])) # 存储CO分子信息
+    
+    return CO_amount, CO2_amount, CO_atoms_indexes, CO2_atoms_indexes, co_molecules, co2_molecules</code></pre>
+</details>
+<div class="desc"><p>识别当前帧中的CO和CO2分子，返回当前帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>CO和CO2分子信息</p>
+<p>CO_amount (int): CO分子数量</p>
+<p>CO2_amount (int): CO2分子数量</p>
+<p>CO_atoms_indexes (list): CO分子中所有原子的序号列表</p>
+<p>CO2_atoms_indexes (list): CO2分子中所有原子的序号列表</p>
+<p>co_molecules (list): CO分子列表，每个元素是一个元组，包含C原子序号和O原子序号</p>
+<p>co2_molecules (list): CO2分子列表，每个元素是一个元组，包含C原子序号和两个O原子序号</p>
+</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.detect_CO_coordinating_to_Pd"><code class="name flex">
+<span>def <span class="ident">detect_CO_coordinating_to_Pd</span></span>(<span>data, type_names_order, co_molecules, c_cutoff=3.0, o_cutoff=2.5)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_CO_coordinating_to_Pd(data, type_names_order, co_molecules, c_cutoff=3.0, o_cutoff=2.5):
+    &#34;&#34;&#34;
+    识别输入帧与Pd配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。
+
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+        
+        co_molecules (list): 所有CO分子列表（包含气态），每个元素是一个元组，包含C原子序号和O原子序号
+        
+        c_cutoff (float): C原子与Pd配位的距离阈值，单位为Å，默认为3.0 Å
+        
+        o_cutoff (float): O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å
+
+    Returns:
+        tuple: CO分子信息
+
+            co_pd_count (int): 与Pd配位的CO分子数量
+
+            total_co (int): 总CO分子数量
+
+            co_pd_details (list): 与Pd配位的CO分子详情列表，每个元素是一个字典，
+                包含&#39;co&#39;键（CO分子的原子序号元组）、&#39;c_pd_neighbors&#39;键（C原子与Pd配位的邻居列表）、
+                &#39;o_pd_neighbors&#39;键（O原子与Pd配位的邻居列表）
+
+    &#34;&#34;&#34;
+    particles = data.particles
+    if particles is None or not co_molecules:
+        return 0, 0, []
+    
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    # 分别计算C原子和O原子使用的邻居列表
+    # O原子：使用较短的阈值 (o_cutoff)
+    finder_o = CutoffNeighborFinder(o_cutoff, data)
+    # C原子：使用较长的阈值 (c_cutoff)
+    finder_c = CutoffNeighborFinder(c_cutoff, data)
+    
+    num_atoms = particles.count
+    neighbors_o = {i: [] for i in range(num_atoms)}
+    neighbors_c = {i: [] for i in range(num_atoms)}
+    
+    # 生成邻居列表
+    for i in range(num_atoms):
+        # O原子阈值邻居列表
+        for neighbor in finder_o.find(i):
+            neighbors_o[i].append(neighbor.index)
+        # C原子阈值邻居列表
+        for neighbor in finder_c.find(i):
+            neighbors_c[i].append(neighbor.index)
+    
+    # 计算与Pd配位的CO分子
+    co_pd_count = 0
+    co_pd_details = []
+    
+    for c_index, o_index in co_molecules:
+        # 检查C原子是否与Pd配位 (使用 c_cutoff)
+        c_coordinating_pds = []
+        for neighbor_index in neighbors_c[c_index]:
+            if symbols[neighbor_index] == &#39;Pd&#39;:
+                c_coordinating_pds.append(neighbor_index)
+        
+        # 检查O原子是否与Pd配位 (使用 o_cutoff)
+        o_coordinating_pds = []
+        for neighbor_index in neighbors_o[o_index]:
+            if symbols[neighbor_index] == &#39;Pd&#39;:
+                o_coordinating_pds.append(neighbor_index)
+        
+        # 如果C或O与Pd配位，则计为与Pd配位的CO分子
+        if c_coordinating_pds or o_coordinating_pds:
+            co_pd_count += 1
+            co_pd_details.append({
+                &#39;co&#39;: (c_index, o_index),
+                &#39;c_pd_neighbors&#39;: c_coordinating_pds,
+                &#39;o_pd_neighbors&#39;: o_coordinating_pds
+            })
+    
+    total_co = len(co_molecules)
+    return co_pd_count, total_co, co_pd_details</code></pre>
+</details>
+<div class="desc"><p>识别输入帧与Pd配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>co_molecules</code></strong> :&ensp;<code>list</code></dt>
+<dd>所有CO分子列表（包含气态），每个元素是一个元组，包含C原子序号和O原子序号</dd>
+<dt><strong><code>c_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>C原子与Pd配位的距离阈值，单位为Å，默认为3.0 Å</dd>
+<dt><strong><code>o_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>CO分子信息</p>
+<p>co_pd_count (int): 与Pd配位的CO分子数量</p>
+<p>total_co (int): 总CO分子数量</p>
+<p>co_pd_details (list): 与Pd配位的CO分子详情列表，每个元素是一个字典，
+包含'co'键（CO分子的原子序号元组）、'c_pd_neighbors'键（C原子与Pd配位的邻居列表）、
+'o_pd_neighbors'键（O原子与Pd配位的邻居列表）</p>
+</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.detect_O2_molecules"><code class="name flex">
+<span>def <span class="ident">detect_O2_molecules</span></span>(<span>data, type_names_order)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_O2_molecules(data,type_names_order):
+    &#34;&#34;&#34;
+    识别输入帧的O2分子，输出输入帧中O2分子数量、O2的O原子序号列表、O2分子列表。
+
+    Args:
+
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+    Returns:
+
+        tuple: O2分子信息
+
+            O2_amount (int): O2分子数量
+            
+            O2_indexes (list): O2分子中O原子的序号列表
+
+            o2_molecules (list): O2分子列表，每个元素是一个元组，包含两个O原子的序号
+                        
+    &#34;&#34;&#34;
+    cutoff = 1.5  # O-O键的距离阈值，单位为Å
+    particles = data.particles
+    if particles is None:
+        return [], [], 0
+    
+    # 获取原子类型  
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    # 计算邻居列表
+    num_atoms = particles.count
+    finder = CutoffNeighborFinder(cutoff, data)
+    neighbors = {i: [] for i in range(num_atoms)}
+    for i in range(num_atoms):
+        for neighbor in finder.find(i):
+            neighbors[i].append(neighbor.index)
+    
+    # 识别O₂分子
+    counted_O_indices = set()
+    o2_molecules = []
+
+
+    for i in range(num_atoms):
+        if symbols[i] != &#39;O&#39; or i in counted_O_indices:
+            continue
+        
+        bonded_O = [j for j in neighbors[i] if symbols[j] == &#39;O&#39;]
+        if len(bonded_O) == 1:
+            j = bonded_O[0]
+            o2_molecules.append((i, j))
+            counted_O_indices.update([i, j])
+    
+    O2_indexes = [o_index for o2_indexes in o2_molecules for o_index in o2_indexes]
+    O2_amount = len(o2_molecules)
+    return O2_amount, O2_indexes, o2_molecules</code></pre>
+</details>
+<div class="desc"><p>识别输入帧的O2分子，输出输入帧中O2分子数量、O2的O原子序号列表、O2分子列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>O2分子信息</p>
+<p>O2_amount (int): O2分子数量</p>
+<p>O2_indexes (list): O2分子中O原子的序号列表</p>
+<p>o2_molecules (list): O2分子列表，每个元素是一个元组，包含两个O原子的序号</p>
+</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.detect_single_adsorbed_O"><code class="name flex">
+<span>def <span class="ident">detect_single_adsorbed_O</span></span>(<span>data, type_names_order)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_single_adsorbed_O(data, type_names_order):
+    &#34;&#34;&#34;
+    识别输入帧中单个吸附O原子（没有与C/O成键，与Pd/Au成键的O原子）
+    返回与Pd配位的单个吸附O原子数量、单个吸附O原子序号列表。
+
+    Args:
+        
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+    Returns:
+        tuple: 单个吸附的O原子信息
+
+            single_O_count (int): 与Pd/Au配位的单个吸附O原子数量
+            
+            single_O_indices (list): 与Pd/Au配位的单个吸附O原子序号列表
+
+    &#34;&#34;&#34;
+    # 定义不同原子对的键长阈值
+    cutoff_C = 1.5  # O-C键长阈值
+    cutoff_O = 1.5  # O-O键长阈值
+    cutoff_Au = 2.5  # O-Au键长阈值
+    cutoff_Pd = 2.5  # O-Pd键长阈值
+    
+    particles = data.particles
+    if particles is None:
+        return 0, []
+    
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+
+    # 创建不同原子对的邻居查找器
+    finder_C = CutoffNeighborFinder(cutoff_C, data)  # 查找C邻居
+    finder_O = CutoffNeighborFinder(cutoff_O, data)  # 查找O邻居
+    finder_Au = CutoffNeighborFinder(cutoff_Au, data)  # 查找Au邻居
+    finder_Pd = CutoffNeighborFinder(cutoff_Pd, data)  # 查找Pd邻居
+    
+    num_atoms = particles.count
+    single_O_indices = []
+    
+    for i in range(num_atoms):
+        if symbols[i] != &#39;O&#39;:
+            continue
+        
+        # 条件1：检查是否与C原子成键
+        has_bonded_C = False
+        for neighbor in finder_C.find(i):
+            if symbols[neighbor.index] == &#39;C&#39;:
+                has_bonded_C = True
+                break
+        
+        if has_bonded_C:
+            continue  # 与C成键，不符合条件
+        
+        # 条件2：检查是否与其他O原子成键
+        has_bonded_O = False
+        for neighbor in finder_O.find(i):
+            if symbols[neighbor.index] == &#39;O&#39;:
+                has_bonded_O = True
+                break
+        
+        if has_bonded_O:
+            continue  # 与O成键，不符合条件
+        
+        # 条件3：检查是否与Pd或Au成键
+        has_bonded_Pd_Au = False
+        
+        # 检查与Pd成键
+        for neighbor in finder_Pd.find(i):
+            if symbols[neighbor.index] == &#39;Pd&#39;:
+                has_bonded_Pd_Au = True
+                break
+        
+        # 如果还没有找到与Pd/Au成键，检查与Au成键
+        if not has_bonded_Pd_Au:
+            for neighbor in finder_Au.find(i):
+                if symbols[neighbor.index] == &#39;Au&#39;:
+                    has_bonded_Pd_Au = True
+                    break
+        
+        if has_bonded_Pd_Au:
+            single_O_indices.append(i)
+    
+    N_single_O = len(single_O_indices)
+    return N_single_O, single_O_indices</code></pre>
+</details>
+<div class="desc"><p>识别输入帧中单个吸附O原子（没有与C/O成键，与Pd/Au成键的O原子）
+返回与Pd配位的单个吸附O原子数量、单个吸附O原子序号列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>单个吸附的O原子信息</p>
+<p>single_O_count (int): 与Pd/Au配位的单个吸附O原子数量</p>
+<p>single_O_indices (list): 与Pd/Au配位的单个吸附O原子序号列表</p>
+</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.extract_atom_types"><code class="name flex">
+<span>def <span class="ident">extract_atom_types</span></span>(<span>trajectory_file: str) ‑> List[str]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def extract_atom_types(trajectory_file: str) -&gt; List[str]:
+
+    &#34;&#34;&#34;
+    获取.xyz文件第一帧原子类型的列表（保持原始顺序）。
+
+    Args:
+
+        trajectory_file (str): 输入的xyz轨迹文件路径
+
+    Returns:
+
+        element_list (list): 第一个构型中所有原子类型的列表，保持原始顺序
+
+    &#34;&#34;&#34;
+    with open(trajectory_file, &#39;r&#39;, encoding=&#39;utf-8&#39;) as f:
+        n_atoms = int(f.readline().strip())
+        f.readline()  # 跳过注释行
+        
+        types = []
+        for _ in range(n_atoms):
+            atom_type = f.readline().split()[1] # 假设原子类型在第二列
+            if not atom_type.isdigit():  # 过滤数字
+                types.append(atom_type)
+    
+    # 去重但保持顺序
+    element_list = []
+    seen = set()
+    for atom in types:
+        if atom not in seen:
+            seen.add(atom)
+            element_list.append(atom)
+    
+    return element_list</code></pre>
+</details>
+<div class="desc"><p>获取.xyz文件第一帧原子类型的列表（保持原始顺序）。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>trajectory_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入的xyz轨迹文件路径</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>element_list (list): 第一个构型中所有原子类型的列表，保持原始顺序</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_atoms_near_point"><code class="name flex">
+<span>def <span class="ident">get_atoms_near_point</span></span>(<span>data: ovito.data.DataCollection, point: numpy.ndarray, cutoff: float = 5.0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_atoms_near_point(data: DataCollection, point: np.ndarray, cutoff: float = 5.0):
+    &#34;&#34;&#34;
+
+    获取距离指定点cutoff范围内的所有原子序号
+    
+    Args:
+        
+        data (DataCollection): 结构的ovito数据集合
+        
+        point (np.ndarray): 指定点坐标
+        
+        cutoff (float): 截断距离（默认5Å）
+    
+    Returns:
+    
+        atoms_within_cutoff (list): 在截断距离内的原子序号列表
+
+    &#34;&#34;&#34;
+    
+    # 获取粒子位置
+    positions = data.particles.positions[...]
+    
+    if point.shape != (3,):
+        print(f&#34;错误: 指定点坐标维度不正确。期望(3,)，实际{point.shape}&#34;)
+        return []
+    
+    # 计算所有原子到指定点的距离
+    distances = np.linalg.norm(positions - point, axis=1)
+    
+    # 找出在截断距离内的原子序号
+    atoms_within_cutoff = np.where(distances &lt;= cutoff)[0].tolist()
+    
+    # 输出信息
+    print(f&#34;指定点坐标: {point}&#34;)
+    print(f&#34;截断距离: {cutoff} Å&#34;)
+    print(f&#34;指定点周围{cutoff}Å范围内的原子数: {len(atoms_within_cutoff)}&#34;)
+    print(f&#34;这些原子的序号: {atoms_within_cutoff}&#34;)
+    
+    return atoms_within_cutoff</code></pre>
+</details>
+<div class="desc"><p>获取距离指定点cutoff范围内的所有原子序号</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>point</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>指定点坐标</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>截断距离（默认5Å）</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>atoms_within_cutoff (list): 在截断距离内的原子序号列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_reaction_local_structure"><code class="name flex">
+<span>def <span class="ident">get_reaction_local_structure</span></span>(<span>data, type_names_order, c_index, o_index, cutoff=6.0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_reaction_local_structure(data, type_names_order,c_index, o_index, cutoff=6.0):
+    &#34;&#34;&#34;
+    获取反应局部结构：以目标C和O原子连线中点为中心，cutoff范围内的所有原子（排除气态分子原子），
+    并且如果吸附态CO分子有一个原子在范围内，则添加另一个原子。返回满足条件的原子索引列表。
+
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+        c_index (int): 目标C原子索引
+
+        o_index (int): 目标O原子索引
+
+        cutoff (float): 以C-O连线中点为中心的范围，单位为Å，默认为6.0 Å
+
+    Returns:
+        
+        final_atom_list (list): 满足条件的原子索引列表
+    &#34;&#34;&#34; 
+    # 2. 检测所有分子类型
+    CO_amount, CO2_amount, CO_atoms_indexes, CO2_atoms_indexes, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
+    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, co_molecules)
+
+    # 3. 识别气态分子原子
+    gases_atoms = identify_gas_molecules_to_delete(data, type_names_order)
+
+    # 4. 识别吸附态CO分子
+    # 找出所有吸附态CO分子的原子
+    adsorbed_CO_atoms = set()
+    for detail in co_pd_details:
+        c_idx, o_idx = detail[&#39;co&#39;]
+        adsorbed_CO_atoms.update([c_idx, o_idx])
+
+
+    # 5. 获取距离目标C和O连线中点6Å范围内的原子
+
+    positions = data.particles.positions[...]
+
+    # 假设前两个是目标C和O原子
+    C_coord = positions[c_index]
+    O_coord = positions[o_index]
+
+    # 计算连线中点坐标
+    midpoint = (C_coord + O_coord) / 2.0
+
+    # 获取距离中点6Å范围内的所有原子
+    nearby_atoms = get_atoms_near_point(data, midpoint, cutoff)
+
+    # 6. 排除气态分子原子
+    nearby_atoms_without_gases = []
+    for i in nearby_atoms:
+        if i not in gases_atoms:
+            nearby_atoms_without_gases.append(i)
+
+    # 7. 处理吸附态CO分子：如果吸附态CO的一个原子在范围内，则添加另一个原子
+    # 创建吸附态CO的配对字典
+    co_pairs_dict = {}  # 键为C原子索引，值为对应的O原子索引；键为O原子索引，值为对应的C原子索引
+    for c_idx, o_idx in co_molecules:
+        if c_idx in adsorbed_CO_atoms:  # 只处理吸附态CO
+            co_pairs_dict[c_idx] = o_idx
+            co_pairs_dict[o_idx] = c_idx
+
+    # 添加缺失的吸附态CO原子
+    final_atom_list = set(nearby_atoms_without_gases)  # 使用集合避免重复
+
+    for atom_idx in nearby_atoms_without_gases:
+        if atom_idx in co_pairs_dict:
+            # 这个原子属于吸附态CO，找到它的配对原子
+            partner_idx = co_pairs_dict[atom_idx]
+            # 如果配对原子不在当前列表中，添加它
+            if partner_idx not in final_atom_list and partner_idx not in gases_atoms:
+                final_atom_list.add(partner_idx)
+
+    # 转换为列表并排序
+    final_atom_list = sorted(list(final_atom_list))
+    return final_atom_list</code></pre>
+</details>
+<div class="desc"><p>获取反应局部结构：以目标C和O原子连线中点为中心，cutoff范围内的所有原子（排除气态分子原子），
+并且如果吸附态CO分子有一个原子在范围内，则添加另一个原子。返回满足条件的原子索引列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>c_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>目标C原子索引</dd>
+<dt><strong><code>o_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>目标O原子索引</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>以C-O连线中点为中心的范围，单位为Å，默认为6.0 Å</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>final_atom_list (list): 满足条件的原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.identify_gas_molecules_to_delete"><code class="name flex">
+<span>def <span class="ident">identify_gas_molecules_to_delete</span></span>(<span>data, type_names_order)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def identify_gas_molecules_to_delete(data, type_names_order):
+    &#34;&#34;&#34;
+    识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
+    返回需要删除的气态分子原子索引列表。
+
+    Args:
+
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+    Returns:
+
+        gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表
+            
+    &#34;&#34;&#34;
+    particles = data.particles
+    if particles is None:
+        return []
+    
+    # 使用检测函数
+    N_O2, O2_indices, O2_pairs = detect_O2_molecules(data, type_names_order)
+    N_CO, N_CO2, CO_list, CO2_list, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
+    N_single_O, single_O_indices = detect_single_adsorbed_O(data, type_names_order)
+    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, 
+                                                                       co_molecules,c_cutoff=3.0, o_cutoff=2.5)
+    
+    # 需要删除的气态分子原子索引
+    gas_atoms_to_delete = set()
+    
+    # 1. 所有O2分子都视为气态
+    gas_atoms_to_delete.update(O2_indices)
+    
+    # 2. 只删除未与Pd配位的CO分子（气态CO）
+    # 找出所有与Pd配位的CO分子（吸附态CO，需要保留）
+    adsorbed_CO_indexes = set()
+    for detail in co_pd_details:
+        c_idx, o_idx = detail[&#39;co&#39;]
+        adsorbed_CO_indexes.update([c_idx, o_idx])
+    
+    # 删除未与Pd配位的CO分子（气态CO）
+    for c_idx, o_idx in co_molecules:
+        if c_idx not in adsorbed_CO_indexes:  # 这是气态CO
+            gas_atoms_to_delete.update([c_idx, o_idx])
+    
+    # 3. 所有CO2分子都视为气态
+    gas_atoms_to_delete.update(CO2_list)
+    
+    # 4. 保留所有单个吸附O原子
+    # 5. 保留所有金属原子
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    for i in range(particles.count):
+        if symbols[i] in [&#39;Pd&#39;, &#39;Au&#39;]:
+            if i in gas_atoms_to_delete:
+                gas_atoms_to_delete.remove(i)
+    
+    return list(gas_atoms_to_delete)</code></pre>
+</details>
+<div class="desc"><p>识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
+返回需要删除的气态分子原子索引列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.sum_to_n"><code class="name flex">
+<span>def <span class="ident">sum_to_n</span></span>(<span>n: int) ‑> int</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def sum_to_n(n: int) -&gt; int:
+    &#34;&#34;&#34;
+    Calculate the sum of all integers from 1 to n inclusive.
+
+    Args:
+        n (int): The upper limit (must be a positive integer).
+
+    Returns:
+        int: The sum 1 + 2 + ... + n.
+
+    Raises:
+        ValueError: If n is not a positive integer.
+
+    Examples:
+        &gt;&gt;&gt; sum_to_n(5)
+        15
+        &gt;&gt;&gt; sum_to_n(100)
+        5050
+    &#34;&#34;&#34;
+    if not isinstance(n, int) or n &lt;= 0:
+        raise ValueError(&#34;n must be a positive integer.&#34;)
+    return n * (n + 1) // 2  # 使用高斯求和公式，效率O(1)</code></pre>
+</details>
+<div class="desc"><p>Calculate the sum of all integers from 1 to n inclusive.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
+<dd>The upper limit (must be a positive integer).</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>int</code></dt>
+<dd>The sum 1 + 2 + &hellip; + n.</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If n is not a positive integer.</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; sum_to_n(5)
+15
+&gt;&gt;&gt; sum_to_n(100)
+5050
+</code></pre></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="dcg_sci_tool.cli" href="cli.html">dcg_sci_tool.cli</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="dcg_sci_tool.detect_CO_CO2_molecules" href="#dcg_sci_tool.detect_CO_CO2_molecules">detect_CO_CO2_molecules</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_CO_coordinating_to_Pd" href="#dcg_sci_tool.detect_CO_coordinating_to_Pd">detect_CO_coordinating_to_Pd</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_O2_molecules" href="#dcg_sci_tool.detect_O2_molecules">detect_O2_molecules</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_single_adsorbed_O" href="#dcg_sci_tool.detect_single_adsorbed_O">detect_single_adsorbed_O</a></code></li>
+<li><code><a title="dcg_sci_tool.extract_atom_types" href="#dcg_sci_tool.extract_atom_types">extract_atom_types</a></code></li>
+<li><code><a title="dcg_sci_tool.get_atoms_near_point" href="#dcg_sci_tool.get_atoms_near_point">get_atoms_near_point</a></code></li>
+<li><code><a title="dcg_sci_tool.get_reaction_local_structure" href="#dcg_sci_tool.get_reaction_local_structure">get_reaction_local_structure</a></code></li>
+<li><code><a title="dcg_sci_tool.identify_gas_molecules_to_delete" href="#dcg_sci_tool.identify_gas_molecules_to_delete">identify_gas_molecules_to_delete</a></code></li>
+<li><code><a title="dcg_sci_tool.sum_to_n" href="#dcg_sci_tool.sum_to_n">sum_to_n</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>
