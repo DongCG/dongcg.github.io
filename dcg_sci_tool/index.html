@@ -52,6 +52,66 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
+<dt id="dcg_sci_tool.create_filtered_structure"><code class="name flex">
+<span>def <span class="ident">create_filtered_structure</span></span>(<span>data, keep_indexes_list: List[int], type_names_order: List[str]) ‑> ase.atoms.Atoms</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_filtered_structure(data, 
+                             keep_indexes_list: List[int],
+                             type_names_order: List[str]) -&gt; Atoms:
+    &#34;&#34;&#34;
+    根据保留的原子索引创建新的ASE结构
+    
+    参数:
+        input_file: 原始.xyz文件路径
+        keep_indexes_list: 保留的原子索引列表
+        type_names_order: 原子类型顺序列表
+    
+    返回:
+        新的ASE原子对象
+    &#34;&#34;&#34;
+    # 使用OVITO读取文件，确保格式正确
+    particles = data.particles
+    
+    
+    # 从OVITO获取位置和符号
+    positions = particles.positions[...]
+    particle_types = particles.particle_types[...]
+    
+    # 获取保留原子的位置和符号
+    keep_positions = []
+    keep_symbols = []
+    
+    for idx in keep_indexes_list:
+        keep_positions.append(positions[idx])
+        
+        # 获取原子类型对应的符号
+        type_id = particle_types[idx]
+        # 注意：type_id是从1开始的索引
+        if 1 &lt;= type_id &lt;= len(type_names_order):
+            symbol = type_names_order[type_id - 1]
+        else:
+            symbol = &#39;X&#39;  # 未知元素
+        keep_symbols.append(symbol)
+    
+    # 创建新的ASE原子对象
+    new_atoms = Atoms(symbols=keep_symbols, positions=keep_positions)
+    new_atoms.pbc = [True, True, True]  # 周期性边界条件
+
+    return new_atoms</code></pre>
+</details>
+<div class="desc"><p>根据保留的原子索引创建新的ASE结构</p>
+<p>参数:
+input_file: 原始.xyz文件路径
+keep_indexes_list: 保留的原子索引列表
+type_names_order: 原子类型顺序列表</p>
+<p>返回:
+新的ASE原子对象</p></div>
+</dd>
 <dt id="dcg_sci_tool.detect_CO_CO2_molecules"><code class="name flex">
 <span>def <span class="ident">detect_CO_CO2_molecules</span></span>(<span>data, type_names_order)</span>
 </code></dt>
@@ -356,6 +416,85 @@ el.replaceWith(d);
 </dd>
 </dl></div>
 </dd>
+<dt id="dcg_sci_tool.detect_gas_molecules_for_deletion"><code class="name flex">
+<span>def <span class="ident">detect_gas_molecules_for_deletion</span></span>(<span>data, type_names_order)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_gas_molecules_for_deletion(data, type_names_order):
+    &#34;&#34;&#34;
+    识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
+    返回需要删除的气态分子原子索引列表。
+
+    Args:
+
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+    Returns:
+
+        gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表
+            
+    &#34;&#34;&#34;
+    particles = data.particles
+    if particles is None:
+        return []
+    
+    # 使用检测函数
+    N_O2, O2_indices, O2_pairs = detect_O2_molecules(data, type_names_order)
+    N_CO, N_CO2, CO_list, CO2_list, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
+    N_single_O, single_O_indices = detect_single_adsorbed_O(data, type_names_order)
+    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, 
+                                                                       co_molecules,c_cutoff=3.0, o_cutoff=2.5)
+    
+    # 需要删除的气态分子原子索引
+    gas_atoms_to_delete = set()
+    
+    # 1. 所有O2分子都视为气态
+    gas_atoms_to_delete.update(O2_indices)
+    
+    # 2. 只删除未与Pd配位的CO分子（气态CO）
+    # 找出所有与Pd配位的CO分子（吸附态CO，需要保留）
+    adsorbed_CO_indexes = set()
+    for detail in co_pd_details:
+        c_idx, o_idx = detail[&#39;co&#39;]
+        adsorbed_CO_indexes.update([c_idx, o_idx])
+    
+    # 删除未与Pd配位的CO分子（气态CO）
+    for c_idx, o_idx in co_molecules:
+        if c_idx not in adsorbed_CO_indexes:  # 这是气态CO
+            gas_atoms_to_delete.update([c_idx, o_idx])
+    
+    # 3. 所有CO2分子都视为气态
+    gas_atoms_to_delete.update(CO2_list)
+    
+    # 4. 保留所有单个吸附O原子
+    # 5. 保留所有金属原子
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    for i in range(particles.count):
+        if symbols[i] in [&#39;Pd&#39;, &#39;Au&#39;]:
+            if i in gas_atoms_to_delete:
+                gas_atoms_to_delete.remove(i)
+    
+    return list(gas_atoms_to_delete)</code></pre>
+</details>
+<div class="desc"><p>识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
+返回需要删除的气态分子原子索引列表。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表</p></div>
+</dd>
 <dt id="dcg_sci_tool.detect_single_adsorbed_O"><code class="name flex">
 <span>def <span class="ident">detect_single_adsorbed_O</span></span>(<span>data, type_names_order)</span>
 </code></dt>
@@ -582,15 +721,90 @@ el.replaceWith(d);
 <h2 id="returns">Returns</h2>
 <p>atoms_within_cutoff (list): 在截断距离内的原子序号列表</p></div>
 </dd>
-<dt id="dcg_sci_tool.get_reaction_local_structure"><code class="name flex">
-<span>def <span class="ident">get_reaction_local_structure</span></span>(<span>data, type_names_order, c_index, o_index, cutoff=6.0)</span>
+<dt id="dcg_sci_tool.get_pdau_cluster_center"><code class="name flex">
+<span>def <span class="ident">get_pdau_cluster_center</span></span>(<span>data: ovito.data.DataCollection, type_names_order: list)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_reaction_local_structure(data, type_names_order,c_index, o_index, cutoff=6.0):
+<pre><code class="python">def get_pdau_cluster_center(data: DataCollection, type_names_order: list):
+    &#34;&#34;&#34;
+    基于 OVITO 数据对象和原子类型顺序计算 PdAu 簇的几何中心坐标。
+
+    Args:
+        data (DataCollection): OVITO 数据对象，包含原子结构信息
+        type_names_order (list): 原子类型名称顺序列表
+
+    Returns:
+        np.ndarray: PdAu 簇的几何中心坐标，形状为 (3,)
+    
+    Raises:
+        ValueError: 如果未找到 Pd 或 Au 原子
+    &#34;&#34;&#34;
+    # 获取原子位置和类型
+    positions = data.particles.positions[...]
+    types = data.particles.particle_types[...]  # 类型索引数组，从 1 开始
+    
+    # 检查数据完整性
+    if positions is None or types is None:
+        raise ValueError(&#34;数据对象不包含粒子位置或类型信息&#34;)
+    
+    if len(positions) != len(types):
+        raise ValueError(&#34;原子位置和类型数量不匹配&#34;)
+    
+    if not type_names_order:
+        raise ValueError(&#34;type_names_order 列表不能为空&#34;)
+    
+    # 创建原子符号数组
+    symbols = [type_names_order[t-1] for t in types]  # 注意：OVITO 类型索引从 1 开始
+    
+    # 查找 Pd 和 Au 原子
+    pdau_indices = []
+    for i, symbol in enumerate(symbols):
+        if symbol in [&#34;Pd&#34;, &#34;Au&#34;]:
+            pdau_indices.append(i)
+    
+    if not pdau_indices:
+        raise ValueError(&#34;在结构中未找到 Pd 或 Au 原子&#34;)
+    
+    # 提取 Pd 和 Au 原子的位置
+    pdau_positions = positions[pdau_indices]
+    
+    # 计算几何中心
+    pdau_center = np.mean(pdau_positions, axis=0)
+    
+    return pdau_center</code></pre>
+</details>
+<div class="desc"><p>基于 OVITO 数据对象和原子类型顺序计算 PdAu 簇的几何中心坐标。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>OVITO 数据对象，包含原子结构信息</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称顺序列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>PdAu 簇的几何中心坐标，形状为 (3,)</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>如果未找到 Pd 或 Au 原子</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.get_reaction_local_atoms_list"><code class="name flex">
+<span>def <span class="ident">get_reaction_local_atoms_list</span></span>(<span>data, type_names_order, c_index, o_index, cutoff=6.0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_reaction_local_atoms_list(data, type_names_order,c_index, o_index, cutoff=6.0):
     &#34;&#34;&#34;
     获取反应局部结构：以目标C和O原子连线中点为中心，cutoff范围内的所有原子（排除气态分子原子），
     并且如果吸附态CO分子有一个原子在范围内，则添加另一个原子。返回满足条件的原子索引列表。
@@ -615,7 +829,7 @@ el.replaceWith(d);
     co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, co_molecules)
 
     # 3. 识别气态分子原子
-    gases_atoms = identify_gas_molecules_to_delete(data, type_names_order)
+    gases_atoms = detect_gas_molecules_for_deletion(data, type_names_order)
 
     # 4. 识别吸附态CO分子
     # 找出所有吸附态CO分子的原子
@@ -686,84 +900,248 @@ el.replaceWith(d);
 <h2 id="returns">Returns</h2>
 <p>final_atom_list (list): 满足条件的原子索引列表</p></div>
 </dd>
-<dt id="dcg_sci_tool.identify_gas_molecules_to_delete"><code class="name flex">
-<span>def <span class="ident">identify_gas_molecules_to_delete</span></span>(<span>data, type_names_order)</span>
+<dt id="dcg_sci_tool.get_struct_focusing_reaction_site"><code class="name flex">
+<span>def <span class="ident">get_struct_focusing_reaction_site</span></span>(<span>data, type_names_order, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def identify_gas_molecules_to_delete(data, type_names_order):
+<pre><code class="python">def get_struct_focusing_reaction_site(data, type_names_order, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None):
     &#34;&#34;&#34;
-    识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
-    返回需要删除的气态分子原子索引列表。
-
-    Args:
-
-        data (DataCollection): 结构的ovito数据集合
-        
-        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
-
-    Returns:
-
-        gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表
-            
+    输入原始MD-neb结构文件，输出经过处理后的结构文件，将反应局部结构聚焦到小晶胞中，
+    并使ovito观察视线方向（Y轴）经过反应区域和团簇中心
+    输出聚焦后的结构文件（ASE ATOMS类）
+    
+    参数:
+    ----------
+    data : ovito.data.DataCollection
+       包含原子结构和相关数据的Ovito DataCollection对象
+    type_names_order : list of str
+       原子类型名称的顺序列表
+    c_index : int
+       反应物CO的C原子的索引
+    o_index : int
+       反应物O原子的索引
+    cutoff : float
+       截止距离，单位为Å，默认为6.0
+    target_vector : np.ndarray 或 list/tuple
+       目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+    new_cell : np.ndarray 或 list/tuple
+       新的晶胞尺寸，形状为(3,)，如 [a, b, c]
+    
+    返回:
+    ----------
+       返回旋转并平移后的ASE Atoms对象
+    rotated_translated_struct : Atoms
+       旋转并平移后的ASE Atoms对象
     &#34;&#34;&#34;
-    particles = data.particles
-    if particles is None:
-        return []
-    
-    # 使用检测函数
-    N_O2, O2_indices, O2_pairs = detect_O2_molecules(data, type_names_order)
-    N_CO, N_CO2, CO_list, CO2_list, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
-    N_single_O, single_O_indices = detect_single_adsorbed_O(data, type_names_order)
-    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, 
-                                                                       co_molecules,c_cutoff=3.0, o_cutoff=2.5)
-    
-    # 需要删除的气态分子原子索引
-    gas_atoms_to_delete = set()
-    
-    # 1. 所有O2分子都视为气态
-    gas_atoms_to_delete.update(O2_indices)
-    
-    # 2. 只删除未与Pd配位的CO分子（气态CO）
-    # 找出所有与Pd配位的CO分子（吸附态CO，需要保留）
-    adsorbed_CO_indexes = set()
-    for detail in co_pd_details:
-        c_idx, o_idx = detail[&#39;co&#39;]
-        adsorbed_CO_indexes.update([c_idx, o_idx])
-    
-    # 删除未与Pd配位的CO分子（气态CO）
-    for c_idx, o_idx in co_molecules:
-        if c_idx not in adsorbed_CO_indexes:  # 这是气态CO
-            gas_atoms_to_delete.update([c_idx, o_idx])
-    
-    # 3. 所有CO2分子都视为气态
-    gas_atoms_to_delete.update(CO2_list)
-    
-    # 4. 保留所有单个吸附O原子
-    # 5. 保留所有金属原子
-    types = particles.particle_types[...]
-    symbols = np.array([type_names_order[t-1] for t in types])
-    for i in range(particles.count):
-        if symbols[i] in [&#39;Pd&#39;, &#39;Au&#39;]:
-            if i in gas_atoms_to_delete:
-                gas_atoms_to_delete.remove(i)
-    
-    return list(gas_atoms_to_delete)</code></pre>
+    # 获取PdAu簇中心
+    cluster_center = get_pdau_cluster_center(data, type_names_order)
+    # 获取反应局部结构的原子索引
+    keep_indexes = get_reaction_local_atoms_list(data, type_names_order, c_index, o_index, cutoff)
+    # 以目标C和目标O连线中点为旋转向量的终点
+    vector_endpoint = (data.particles.positions[o_index] + data.particles.positions[c_index]) / 2
+
+
+    # 创建新的结构对象，包含所有原子但只保留反应局部结构的原子类型
+    filtered_struct = create_filtered_structure(data, keep_indexes, type_names_order)
+    # 将结构旋转，使得目标向量与-Y轴同向
+    rotated_struct = rotate_v1_around_p_to_v2(
+        atoms=filtered_struct,
+        rotation_center=cluster_center,
+        vector_endpoint=vector_endpoint,  # Use first atom position as vector endpoint
+        target_vector=target_vector
+    )
+
+    # 将旋转后的结构平移，使得簇中心位于新晶胞的中心
+    rotated_struct.set_cell(new_cell)
+    rotated_struct.set_pbc([True, True, True])
+    rotated_translated_struct = translate_structure_center(rotated_struct, np.array(new_cell)/2)
+
+
+    return rotated_translated_struct</code></pre>
 </details>
-<div class="desc"><p>识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
-返回需要删除的气态分子原子索引列表。</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
-<dd>结构的ovito数据集合</dd>
-<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
-<dd>原子类型名称列表，索引对应原子类型编号</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<p>gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表</p></div>
+<div class="desc"><p>输入原始MD-neb结构文件，输出经过处理后的结构文件，将反应局部结构聚焦到小晶胞中，
+并使ovito观察视线方向（Y轴）经过反应区域和团簇中心
+输出聚焦后的结构文件（ASE ATOMS类）</p>
+<h2 id="_1">参数:</h2>
+<p>data : ovito.data.DataCollection
+包含原子结构和相关数据的Ovito DataCollection对象
+type_names_order : list of str
+原子类型名称的顺序列表
+c_index : int
+反应物CO的C原子的索引
+o_index : int
+反应物O原子的索引
+cutoff : float
+截止距离，单位为Å，默认为6.0
+target_vector : np.ndarray 或 list/tuple
+目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+new_cell : np.ndarray 或 list/tuple
+新的晶胞尺寸，形状为(3,)，如 [a, b, c]</p>
+<h2 id="_2">返回:</h2>
+<p>返回旋转并平移后的ASE Atoms对象
+rotated_translated_struct : Atoms
+旋转并平移后的ASE Atoms对象</p></div>
+</dd>
+<dt id="dcg_sci_tool.indexes2expression"><code class="name flex">
+<span>def <span class="ident">indexes2expression</span></span>(<span>indexes_list)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def indexes2expression(indexes_list):
+    &#34;&#34;&#34;
+    将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。
+    &#34;&#34;&#34;
+    exprssion_str = &#34;ParticleIndex == &#34; + str(indexes_list[0])
+    for i in indexes_list[1:]:
+        exprssion_str = exprssion_str + &#34;||&#34; + &#34;ParticleIndex == &#34; + str(i)
+    print(&#34;ExpressionSelectionModifier的表达式字符串:&#34;, exprssion_str)
+    return exprssion_str</code></pre>
+</details>
+<div class="desc"><p>将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。</p></div>
+</dd>
+<dt id="dcg_sci_tool.rotate_v1_around_p_to_v2"><code class="name flex">
+<span>def <span class="ident">rotate_v1_around_p_to_v2</span></span>(<span>atoms, rotation_center, vector_endpoint, target_vector)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def rotate_v1_around_p_to_v2(atoms, rotation_center, vector_endpoint, target_vector):
+    &#34;&#34;&#34;
+    旋转结构中的所有原子，使从旋转中心到指定终点的向量与目标向量同向
+    
+    参数:
+    ----------
+    atoms : Atoms
+        包含原子结构的ASE Atoms对象
+    rotation_center : np.ndarray 或 list/tuple
+        旋转中心坐标，形状为(3,)，如 [x, y, z]
+    vector_endpoint : np.ndarray 或 list/tuple
+        要旋转的向量的终点坐标，形状为(3,)
+    target_vector : np.ndarray 或 list/tuple
+        目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+
+        
+    返回:
+    -------
+    atoms : Atoms
+        旋转后的原子结构
+    &#34;&#34;&#34;
+    
+    
+    # 将输入转换为numpy数组
+    P = np.asarray(rotation_center, dtype=float)
+    V1_end = np.asarray(vector_endpoint, dtype=float)
+    V2 = np.asarray(target_vector, dtype=float)
+    
+    print(f&#34;输入参数:&#34;)
+    print(f&#34;  旋转中心P: {P}&#34;)
+    print(f&#34;  向量终点V1_end: {V1_end}&#34;)
+    print(f&#34;  目标向量V2: {V2}&#34;)
+    
+    # 2. 计算要旋转的向量（从旋转中心到终点）
+    V1 = V1_end - P
+    print(f&#34;\n要旋转的向量V1 (从P到V1_end): {V1}&#34;)
+    
+    # 3. 归一化向量
+    v1_norm = np.linalg.norm(V1)
+    v2_norm = np.linalg.norm(V2)
+    
+    if v1_norm &lt; 1e-10:
+        raise ValueError(&#34;旋转向量长度为零，无法计算旋转&#34;)
+    if v2_norm &lt; 1e-10:
+        raise ValueError(&#34;目标向量长度为零，无效的目标方向&#34;)
+    
+    v1_normalized = V1 / v1_norm
+    v2_normalized = V2 / v2_norm
+    
+    print(f&#34;  归一化的V1: {v1_normalized}&#34;)
+    print(f&#34;  归一化的V2: {v2_normalized}&#34;)
+    
+    # 4. 计算旋转矩阵（使用Rodrigues旋转公式）
+    # 计算点积
+    dot_product = np.dot(v1_normalized, v2_normalized)
+    
+    if abs(dot_product - 1.0) &lt; 1e-10:
+        print(&#34;向量V1已经与V2同向，无需旋转&#34;)
+        return atoms
+    elif abs(dot_product + 1.0) &lt; 1e-10:
+        # 方向相反，旋转180度
+        # 找到垂直轴
+        if abs(v1_normalized[0]) &lt; 0.9:
+            axis = np.cross(v1_normalized, np.array([1.0, 0.0, 0.0]))
+        else:
+            axis = np.cross(v1_normalized, np.array([0.0, 1.0, 0.0]))
+        axis = axis / np.linalg.norm(axis)
+        angle = np.pi
+    else:
+        # 计算旋转轴和角度
+        axis = np.cross(v1_normalized, v2_normalized)
+        axis_norm = np.linalg.norm(axis)
+        axis = axis / axis_norm
+        angle = np.arccos(np.clip(dot_product, -1.0, 1.0))
+    
+    print(f&#34;\n旋转信息:&#34;)
+    print(f&#34;  旋转轴: {axis}&#34;)
+    print(f&#34;  旋转角度: {np.degrees(angle):.2f}°&#34;)
+    
+    # 5. 创建旋转矩阵
+    # 使用Rodrigues公式
+    K = np.array([[0, -axis[2], axis[1]],
+                  [axis[2], 0, -axis[0]],
+                  [-axis[1], axis[0], 0]])
+    
+    rotation_matrix = np.eye(3) + np.sin(angle) * K + (1 - np.cos(angle)) * np.dot(K, K)
+    
+    print(f&#34;  旋转矩阵:\n{rotation_matrix}&#34;)
+    
+    # 6. 创建绕指定中心点旋转的4x4变换矩阵
+    def create_rotation_around_point(center, R):
+        &#34;&#34;&#34;创建绕点旋转的4x4变换矩阵&#34;&#34;&#34;
+        transform = np.eye(4)
+        transform[0:3, 0:3] = R
+        # 平移部分：c - Rc
+        rc = np.dot(R, center)
+        transform[0:3, 3] = center - rc
+        return transform
+    
+    # 创建旋转变换矩阵
+    transform_matrix = create_rotation_around_point(P, rotation_matrix)
+    
+    # 7. 旋转结构中的所有原子
+    print(f&#34;\n应用旋转到 {len(atoms)} 个原子...&#34;)
+    for i in range(len(atoms)):
+        pos = atoms[i].position
+        # 转换为齐次坐标
+        pos_homogeneous = np.append(pos, 1.0)
+        # 应用变换
+        new_pos_homogeneous = np.dot(transform_matrix, pos_homogeneous)
+        # 更新原子位置
+        atoms[i].position = new_pos_homogeneous[0:3]
+    
+    return atoms</code></pre>
+</details>
+<div class="desc"><p>旋转结构中的所有原子，使从旋转中心到指定终点的向量与目标向量同向</p>
+<h2 id="_1">参数:</h2>
+<p>atoms : Atoms
+包含原子结构的ASE Atoms对象
+rotation_center : np.ndarray 或 list/tuple
+旋转中心坐标，形状为(3,)，如 [x, y, z]
+vector_endpoint : np.ndarray 或 list/tuple
+要旋转的向量的终点坐标，形状为(3,)
+target_vector : np.ndarray 或 list/tuple
+目标向量，形状为(3,)，旋转后当前向量将与此向量同向</p>
+<h2 id="_2">返回:</h2>
+<p>atoms : Atoms
+旋转后的原子结构</p></div>
 </dd>
 <dt id="dcg_sci_tool.sum_to_n"><code class="name flex">
 <span>def <span class="ident">sum_to_n</span></span>(<span>n: int) ‑> int</span>
@@ -819,6 +1197,75 @@ el.replaceWith(d);
 5050
 </code></pre></div>
 </dd>
+<dt id="dcg_sci_tool.translate_structure_center"><code class="name flex">
+<span>def <span class="ident">translate_structure_center</span></span>(<span>atoms, target_center)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def translate_structure_center(atoms, target_center):
+    &#34;&#34;&#34;
+    将输入的ASE Atoms对象整体平移，使其中心平移到目标中心点
+    
+    参数:
+    ----------
+    atoms : Atoms
+        输入的ASE原子结构对象
+    target_center : np.ndarray 或 list/tuple
+        目标中心点坐标，形状为(3,)，如 [x, y, z]
+        
+    返回:
+    -------
+    Atoms
+        平移后的新Atoms对象
+        
+    异常:
+    ------
+    ValueError: 如果输入参数无效
+    &#34;&#34;&#34;
+    
+    # 输入验证
+    if not isinstance(atoms, Atoms):
+        raise ValueError(f&#34;第一个参数必须是ASE Atoms对象，但得到类型: {type(atoms)}&#34;)
+    
+    if len(atoms) == 0:
+        raise ValueError(&#34;输入的Atoms对象不包含任何原子&#34;)
+    
+    # 将目标中心转换为numpy数组
+    target_center = np.asarray(target_center, dtype=float)
+    
+    if target_center.shape != (3,):
+        raise ValueError(f&#34;目标中心必须是3维坐标，但得到 shape={target_center.shape}&#34;)
+    
+    # 计算当前结构的中心
+
+    current_center = np.mean(atoms.positions, axis=0)
+
+    # 计算平移向量
+    translation_vector = target_center - current_center
+    
+    # 创建原子的副本以避免修改原始对象
+    translated_atoms = atoms.copy()
+    
+    # 应用平移
+    translated_atoms.translate(translation_vector)
+    
+    return translated_atoms</code></pre>
+</details>
+<div class="desc"><p>将输入的ASE Atoms对象整体平移，使其中心平移到目标中心点</p>
+<h2 id="_1">参数:</h2>
+<p>atoms : Atoms
+输入的ASE原子结构对象
+target_center : np.ndarray 或 list/tuple
+目标中心点坐标，形状为(3,)，如 [x, y, z]</p>
+<h2 id="_2">返回:</h2>
+<p>Atoms
+平移后的新Atoms对象</p>
+<h2 id="_3">异常:</h2>
+<p>ValueError: 如果输入参数无效</p></div>
+</dd>
 </dl>
 </section>
 <section>
@@ -836,15 +1283,21 @@ el.replaceWith(d);
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="dcg_sci_tool.create_filtered_structure" href="#dcg_sci_tool.create_filtered_structure">create_filtered_structure</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_CO_CO2_molecules" href="#dcg_sci_tool.detect_CO_CO2_molecules">detect_CO_CO2_molecules</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_CO_coordinating_to_Pd" href="#dcg_sci_tool.detect_CO_coordinating_to_Pd">detect_CO_coordinating_to_Pd</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_O2_molecules" href="#dcg_sci_tool.detect_O2_molecules">detect_O2_molecules</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_gas_molecules_for_deletion" href="#dcg_sci_tool.detect_gas_molecules_for_deletion">detect_gas_molecules_for_deletion</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_single_adsorbed_O" href="#dcg_sci_tool.detect_single_adsorbed_O">detect_single_adsorbed_O</a></code></li>
 <li><code><a title="dcg_sci_tool.extract_atom_types" href="#dcg_sci_tool.extract_atom_types">extract_atom_types</a></code></li>
 <li><code><a title="dcg_sci_tool.get_atoms_near_point" href="#dcg_sci_tool.get_atoms_near_point">get_atoms_near_point</a></code></li>
-<li><code><a title="dcg_sci_tool.get_reaction_local_structure" href="#dcg_sci_tool.get_reaction_local_structure">get_reaction_local_structure</a></code></li>
-<li><code><a title="dcg_sci_tool.identify_gas_molecules_to_delete" href="#dcg_sci_tool.identify_gas_molecules_to_delete">identify_gas_molecules_to_delete</a></code></li>
+<li><code><a title="dcg_sci_tool.get_pdau_cluster_center" href="#dcg_sci_tool.get_pdau_cluster_center">get_pdau_cluster_center</a></code></li>
+<li><code><a title="dcg_sci_tool.get_reaction_local_atoms_list" href="#dcg_sci_tool.get_reaction_local_atoms_list">get_reaction_local_atoms_list</a></code></li>
+<li><code><a title="dcg_sci_tool.get_struct_focusing_reaction_site" href="#dcg_sci_tool.get_struct_focusing_reaction_site">get_struct_focusing_reaction_site</a></code></li>
+<li><code><a title="dcg_sci_tool.indexes2expression" href="#dcg_sci_tool.indexes2expression">indexes2expression</a></code></li>
+<li><code><a title="dcg_sci_tool.rotate_v1_around_p_to_v2" href="#dcg_sci_tool.rotate_v1_around_p_to_v2">rotate_v1_around_p_to_v2</a></code></li>
 <li><code><a title="dcg_sci_tool.sum_to_n" href="#dcg_sci_tool.sum_to_n">sum_to_n</a></code></li>
+<li><code><a title="dcg_sci_tool.translate_structure_center" href="#dcg_sci_tool.translate_structure_center">translate_structure_center</a></code></li>
 </ul>
 </li>
 </ul>
