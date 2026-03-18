@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
 <meta name="generator" content="pdoc3 0.11.6">
 <title>dcg_sci_tool API documentation</title>
-<meta name="description" content="dcg-sci-tool is a Python package that provides utility functions for scientific computing. It includes functions for summing numbers to a target value …">
+<meta name="description" content="dcg-sci-tool is a Python package that provides utility functions for scientific computing.
+It includes functions for summing numbers to a target …">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
@@ -36,12 +37,34 @@ el.replaceWith(d);
 <h1 class="title">Package <code>dcg_sci_tool</code></h1>
 </header>
 <section id="section-intro">
-<p>dcg-sci-tool is a Python package that provides utility functions for scientific computing. It includes functions for summing numbers to a target value and extracting atom types from molecular data. This package is designed to be easy to use and integrate into various scientific workflows.</p>
+<p>dcg-sci-tool is a Python package that provides utility functions for scientific computing.
+It includes functions for summing numbers to a target value and extracting atom types from molecular data.
+This package is designed to be easy to use and integrate into various scientific workflows.</p>
 </section>
 <section>
 <h2 class="section-title" id="header-submodules">Sub-modules</h2>
 <dl>
+<dt><code class="name"><a title="dcg_sci_tool.applications" href="applications/index.html">dcg_sci_tool.applications</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 <dt><code class="name"><a title="dcg_sci_tool.cli" href="cli.html">dcg_sci_tool.cli</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="dcg_sci_tool.plot" href="plot/index.html">dcg_sci_tool.plot</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="dcg_sci_tool.reaction" href="reaction/index.html">dcg_sci_tool.reaction</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="dcg_sci_tool.structures_analysis" href="structures_analysis/index.html">dcg_sci_tool.structures_analysis</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt><code class="name"><a title="dcg_sci_tool.structures_modifying" href="structures_modifying/index.html">dcg_sci_tool.structures_modifying</a></code></dt>
 <dd>
 <div class="desc"></div>
 </dd>
@@ -52,31 +75,345 @@ el.replaceWith(d);
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="dcg_sci_tool.create_filtered_structure"><code class="name flex">
-<span>def <span class="ident">create_filtered_structure</span></span>(<span>data, keep_indexes_list: List[int], type_names_order: List[str]) ‑> ase.atoms.Atoms</span>
+<dt id="dcg_sci_tool.add_config_to_xyz"><code class="name flex">
+<span>def <span class="ident">add_config_to_xyz</span></span>(<span>input_file, output_file, Config_type='')</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def create_filtered_structure(data, 
+<pre><code class="python">def add_config_to_xyz(input_file, output_file, Config_type=&#34;&#34;):
+    &#34;&#34;&#34;
+    在.extxyz格式文件的header中添加Config_type，可用于NepTrainKit中的结构点部分选中。
+    输出的.xyz文件中，新Config_type属性的键值对已添加
+    
+    Args:
+
+        input_file (str): 输入的.xyz轨迹文件
+
+        output_file (str): 输出的.xyz轨迹文件
+
+        Config_type (str): 要添加的Config_type值
+
+    &#34;&#34;&#34;
+    
+    with open(input_file) as f:
+        lines = [line.rstrip() for line in f]
+    
+    out = []
+    i = 0
+    frames = 0
+    
+    while i &lt; len(lines):
+        if not lines[i]:
+            i += 1
+            continue
+            
+        # 原子数
+        try:
+            n_atoms = int(lines[i])
+        except:
+            break
+        
+        out.append(str(n_atoms))
+        
+        # header行 - 添加Config_type属性
+        if i + 1 &lt; len(lines):
+            header = lines[i + 1]
+            if header:
+                out.append(f&#34;{header} Config_type=\&#34;{Config_type}\&#34;&#34;)
+            else:
+                out.append(f&#34;Config_type=\&#34;{Config_type}\&#34;&#34;)
+        
+        # 原子行 - 原样输出，不添加额外内容
+        start = i + 2
+        end = min(start + n_atoms, len(lines))
+        
+        for j in range(start, end):
+            out.append(lines[j])  # 保持原子行不变
+        
+        frames += 1
+        i = end
+        
+        # 保持原文件格式
+        if i &lt; len(lines) and not lines[i]:
+            out.append(&#34;&#34;)
+            i += 1
+    
+    with open(output_file, &#39;w&#39;) as f:
+        f.write(&#39;\n&#39;.join(out))</code></pre>
+</details>
+<div class="desc"><p>在.extxyz格式文件的header中添加Config_type，可用于NepTrainKit中的结构点部分选中。
+输出的.xyz文件中，新Config_type属性的键值对已添加</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入的.xyz轨迹文件</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输出的.xyz轨迹文件</dd>
+<dt><strong><code>Config_type</code></strong> :&ensp;<code>str</code></dt>
+<dd>要添加的Config_type值</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.construct_CO2_formation_FS"><code class="name flex">
+<span>def <span class="ident">construct_CO2_formation_FS</span></span>(<span>input_file, atom_indices, output_file='adjusted_structure.xyz')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def construct_CO2_formation_FS(input_file, atom_indices, output_file=&#34;adjusted_structure.xyz&#34;):
+    &#34;&#34;&#34;
+    调整结构，使反应物的吸附态CO和吸附态O相向移动，生成吸附态CO2；
+    具体：
+    1.确定距离吸附态CO的C和吸附态O连线中点最近的Pd或Au原子：middle_metal。
+    2.使反应物的吸附态CO和吸附态O相向移动，使C和吸附O距离缩短到1.25Å，
+    3.调整吸附态CO中O的位置，使吸附态CO的C-O键长恢复到1.25Å，
+    4.整体平移这三个原子，使C和middle_metal距离调整到2.0Å
+    
+    参数:
+    input_file: 输入结构文件
+    atom_indices: 两个原子序号的列表 [C_idx, O_ads_idx]
+    output_file: 输出文件名
+    &#34;&#34;&#34;
+    
+    # 读取结构
+    atoms = read(input_file)
+    
+    # 确保提供了四个原子序号
+    if len(atom_indices) != 2:
+        raise ValueError(&#34;需要 exactly 两个原子序号: C_idx, O_ads_idx&#34;)
+    
+    C_idx, O_ads_idx = atom_indices
+
+    # 寻找反应CO的O原子的索引
+    # 使用ASE的get_distances函数
+    for i in range(len(atoms)):
+        if atoms[i].symbol == &#39;O&#39;:
+            # 计算考虑PBC的距离
+            distance = atoms.get_distance(i, C_idx, mic=True)  # mic=True表示考虑最小镜像约定
+            if distance &lt; 1.25:
+                O_CO_idx = i
+
+    c_o_middle = (atoms[C_idx].position + atoms[O_ads_idx].position) / 2
+
+    # 寻找距离目标C, O中点距离最近的金属原子的索引
+    min_to_pdau_distance = float(&#39;inf&#39;)# inf在数学上表示一个比所有实数都大的数
+    nearest_pdau_index = 0
+    for i in range(len(atoms)):
+        if atoms[i].symbol in [&#39;Pd&#39;, &#39;Au&#39;]:
+            # 计算考虑PBC的距离
+            distance = get_distances(
+                atoms[i].position, 
+                c_o_middle, 
+                cell=atoms.cell, 
+                pbc=atoms.pbc
+            )[1][0, 0]  # 返回的是距离矩阵，取(0,0)元素
+            
+            if distance &lt; min_to_pdau_distance:
+                min_to_pdau_distance = distance
+                nearest_pdau_index = i
+    middle_metal_idx = nearest_pdau_index
+
+
+    # 获取初始位置
+    pos = atoms.positions.copy()
+    middle_metal_pos = pos[middle_metal_idx].copy()  # 中心金属原子位置保持不变
+    
+    # 第一步：移动C、O_CO、O_ads三个原子
+    print(&#34;=== 第一步：调整C-O_ads距离和CO键长 ===&#34;)
+    
+    C_pos = pos[C_idx]
+    O_CO_pos = pos[O_CO_idx]
+    O_ads_pos = pos[O_ads_idx]
+    
+    # 计算当前C与吸附O之间的距离
+    current_C_O_ads_dist = np.linalg.norm(C_pos - O_ads_pos)
+    print(f&#34;当前C-O_ads距离: {current_C_O_ads_dist:.3f} Å&#34;)
+    
+    # 目标距离
+    target_C_O_ads_dist = 1.25  # Å
+    
+    # 计算C到吸附O的方向向量
+    C_to_O_ads = O_ads_pos - C_pos
+    if np.linalg.norm(C_to_O_ads) &gt; 0:
+        direction = C_to_O_ads / np.linalg.norm(C_to_O_ads)
+    else:
+        direction = np.array([1.0, 0.0, 0.0])
+    
+    # 计算需要移动的总距离
+    move_distance_total = current_C_O_ads_dist - target_C_O_ads_dist
+    
+    if move_distance_total &lt; 0:
+        print(&#34;警告: 当前距离已经小于目标距离，将增加距离&#34;)
+        direction = -direction
+        move_distance_total = abs(move_distance_total)
+    
+    print(f&#34;需要移动的总距离: {move_distance_total:.3f} Å&#34;)
+    
+    # C原子和吸附O原子各移动一半的距离（相向移动）
+    move_distance_half = move_distance_total / 2
+    
+    # 移动C原子（向吸附O方向移动一半距离）
+    C_move = direction * move_distance_half
+    pos[C_idx] += C_move
+    
+    # 移动吸附O原子（向C方向移动一半距离）
+    O_ads_move = -direction * move_distance_half
+    pos[O_ads_idx] += O_ads_move
+    
+    # 移动CO中的O原子（跟随C原子移动相同的距离）
+    pos[O_CO_idx] += C_move
+    
+    # 调整CO键长到1.25Å
+    # 此时的CO方向已经不是原始的了，因为C原子发生了移动，整体上看类似于CO发生了旋转
+    CO_vector = pos[O_CO_idx] - pos[C_idx]
+    if np.linalg.norm(CO_vector) &gt; 0:
+        CO_direction = CO_vector / np.linalg.norm(CO_vector)
+    else:
+        CO_direction = np.array([0.0, 1.0, 0.0])
+    
+    # 设置CO中的O原子到C原子的距离为1.25Å
+    pos[O_CO_idx] = pos[C_idx] + CO_direction * 1.25
+    
+    # 第一步完成，验证结果
+    final_C_O_ads_dist_step1 = np.linalg.norm(pos[C_idx] - pos[O_ads_idx])
+    final_CO_dist_step1 = np.linalg.norm(pos[C_idx] - pos[O_CO_idx])
+    
+    print(f&#34;第一步后C-O_ads距离: {final_C_O_ads_dist_step1:.3f} Å&#34;)
+    print(f&#34;第一步后C-O_CO距离: {final_CO_dist_step1:.3f} Å&#34;)
+    
+    # 第二步：整体平移前三个原子来调整C到中心金属距离
+    print(&#34;\n=== 第二步：调整C-Pd距离 ===&#34;)
+    
+    # 计算当前C到中心金属的距离
+    current_C_middle_metal_dist = np.linalg.norm(pos[C_idx] - middle_metal_pos)
+    print(f&#34;当前C-Pd距离: {current_C_middle_metal_dist:.3f} Å&#34;)
+    
+    # 目标距离
+    target_C_middle_metal_dist = 2.00  # Å
+    
+    # 计算需要移动的距离
+    move_distance_Pd = target_C_middle_metal_dist - current_C_middle_metal_dist
+    print(f&#34;需要移动的距离: {move_distance_Pd:.3f} Å&#34;)
+    
+    # 关键修正：计算正确的移动方向
+    # 如果move_distance_Pd为正，需要增加距离，C应该远离中心金属原子
+    # 如果move_distance_Pd为负，需要减少距离，C应该靠近中心金属原子
+    
+    # 计算C到中心金属原子的方向向量（从C指向中心金属原子）
+    C_to_middle_metal = middle_metal_pos - pos[C_idx]
+    if np.linalg.norm(C_to_middle_metal) &gt; 0:
+        middle_metal_direction = C_to_middle_metal / np.linalg.norm(C_to_middle_metal)
+    else:
+        middle_metal_direction = np.array([1.0, 0.0, 0.0])
+    
+    print(f&#34;C指向中心金属原子的方向向量: {middle_metal_direction}&#34;)
+    
+    # 根据移动距离的正负决定移动方向
+    if move_distance_Pd &gt; 0:
+        # 需要增加距离，C应该远离Pd（与Pd方向相反）
+        actual_move_direction = -middle_metal_direction
+        print(&#34;移动方向：远离中心金属原子（与C-&gt;中心金属原子方向相反）&#34;)
+    else:
+        # 需要减少距离，C应该靠近Pd（与Pd方向相同）
+        actual_move_direction = middle_metal_direction
+        print(&#34;移动方向：靠近中心金属原子（与C-&gt;中心金属原子方向相同）&#34;)
+    
+    # 计算移动向量
+    middle_metal_move = actual_move_direction * abs(move_distance_Pd)
+    print(f&#34;实际移动向量: {middle_metal_move}&#34;)
+    
+    # 整体平移前三个原子
+    pos[C_idx] += middle_metal_move
+    pos[O_CO_idx] += middle_metal_move
+    pos[O_ads_idx] += middle_metal_move
+    
+    # 更新原子位置
+    atoms.positions = pos
+    
+    # 最终验证结果
+    final_C_O_ads_dist = np.linalg.norm(atoms.positions[C_idx] - atoms.positions[O_ads_idx])
+    final_CO_dist = np.linalg.norm(atoms.positions[C_idx] - atoms.positions[O_CO_idx])
+    final_C_middle_metal_dist = np.linalg.norm(atoms.positions[C_idx] - atoms.positions[middle_metal_idx])
+    
+    print(f&#34;\n=== 最终结果 ===&#34;)
+    print(f&#34;调整后C-O_ads距离: {final_C_O_ads_dist:.3f} Å&#34;)
+    print(f&#34;调整后C-O_CO距离: {final_CO_dist:.3f} Å&#34;)
+    print(f&#34;调整后C-中心金属原子距离: {final_C_middle_metal_dist:.3f} Å&#34;)
+    
+    # 检查是否满足要求
+    if (abs(final_C_O_ads_dist - 1.25) &lt; 0.01 and 
+        abs(final_CO_dist - 1.25) &lt; 0.01 and 
+        abs(final_C_middle_metal_dist - 2.00) &lt; 0.01):
+        print(&#34;所有距离要求均已满足！&#34;)
+    else:
+        print(&#34;警告：某些距离要求未完全满足&#34;)
+        if abs(final_C_O_ads_dist - 1.25) &gt;= 0.01:
+            print(f&#34;  C-O_ads距离误差: {abs(final_C_O_ads_dist - 1.25):.3f} Å&#34;)
+        if abs(final_CO_dist - 1.25) &gt;= 0.01:
+            print(f&#34;  C-O_CO距离误差: {abs(final_CO_dist - 1.25):.3f} Å&#34;)
+        if abs(final_C_middle_metal_dist - 2.00) &gt;= 0.01:
+            print(f&#34;  C-中心金属原子距离误差: {abs(final_C_middle_metal_dist - 2.00):.3f} Å&#34;)
+    
+    # 保存结果
+    write(output_file, atoms)
+    print(f&#34;结构调整完成，结果保存到 {output_file}&#34;)
+    
+    return atoms</code></pre>
+</details>
+<div class="desc"><p>调整结构，使反应物的吸附态CO和吸附态O相向移动，生成吸附态CO2；
+具体：
+1.确定距离吸附态CO的C和吸附态O连线中点最近的Pd或Au原子：middle_metal。
+2.使反应物的吸附态CO和吸附态O相向移动，使C和吸附O距离缩短到1.25Å，
+3.调整吸附态CO中O的位置，使吸附态CO的C-O键长恢复到1.25Å，
+4.整体平移这三个原子，使C和middle_metal距离调整到2.0Å</p>
+<p>参数:
+input_file: 输入结构文件
+atom_indices: 两个原子序号的列表 [C_idx, O_ads_idx]
+output_file: 输出文件名</p></div>
+</dd>
+<dt id="dcg_sci_tool.create_filtered_structure"><code class="name flex">
+<span>def <span class="ident">create_filtered_structure</span></span>(<span>data,<br>type_names_order: List[str],<br>keep_indexes_list: List[int],<br>old_indexes: List[int]) ‑> ase.atoms.Atoms</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_filtered_structure(data,
+                             type_names_order: List[str],
                              keep_indexes_list: List[int],
-                             type_names_order: List[str]) -&gt; Atoms:
+                             old_indexes :List[int]
+                             ) -&gt; Atoms:
     &#34;&#34;&#34;
     根据保留的原子索引创建新的ASE结构
     
-    参数:
-        input_file: 原始.xyz文件路径
-        keep_indexes_list: 保留的原子索引列表
-        type_names_order: 原子类型顺序列表
+    Args:
+
+        data: OVITO数据对象
+
+        type_names_order (list): 原子类型顺序列表
+
+        keep_indexes_list (list): 需要保留的原子索引列表
+
+        old_indexes (list): 要获得新索引的原子在旧索引中的索引列表
+
     
-    返回:
-        新的ASE原子对象
+    Returns:
+
+        new_atoms (ASE Atoms): 新的ASE原子对象
+
+        new_indexes (list): 旧索引old_indexes对应的新的原子索引列表
+        
     &#34;&#34;&#34;
     # 使用OVITO读取文件，确保格式正确
     particles = data.particles
-    
+
+    # 获取原始晶胞参数，第四列是原点坐标，暂时不用
+    ori_cell = data.cell.matrix[:, :3]
     
     # 从OVITO获取位置和符号
     positions = particles.positions[...]
@@ -97,20 +434,33 @@ el.replaceWith(d);
         else:
             symbol = &#39;X&#39;  # 未知元素
         keep_symbols.append(symbol)
-    
+
+    # 将保留的原子索引位于old_indexes中的部分从旧索引转换为新索引
+    new_indexes = [keep_indexes_list.index(idx) for idx in old_indexes]
+
+
     # 创建新的ASE原子对象
     new_atoms = Atoms(symbols=keep_symbols, positions=keep_positions)
+    new_atoms.set_cell(ori_cell) # 设定晶胞参数为原晶胞参数
     new_atoms.pbc = [True, True, True]  # 周期性边界条件
 
-    return new_atoms</code></pre>
+    return new_atoms, new_indexes</code></pre>
 </details>
 <div class="desc"><p>根据保留的原子索引创建新的ASE结构</p>
-<p>参数:
-input_file: 原始.xyz文件路径
-keep_indexes_list: 保留的原子索引列表
-type_names_order: 原子类型顺序列表</p>
-<p>返回:
-新的ASE原子对象</p></div>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong></dt>
+<dd>OVITO数据对象</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型顺序列表</dd>
+<dt><strong><code>keep_indexes_list</code></strong> :&ensp;<code>list</code></dt>
+<dd>需要保留的原子索引列表</dd>
+<dt><strong><code>old_indexes</code></strong> :&ensp;<code>list</code></dt>
+<dd>要获得新索引的原子在旧索引中的索引列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>new_atoms (ASE Atoms): 新的ASE原子对象</p>
+<p>new_indexes (list): 旧索引old_indexes对应的新的原子索引列表</p></div>
 </dd>
 <dt id="dcg_sci_tool.detect_CO_CO2_molecules"><code class="name flex">
 <span>def <span class="ident">detect_CO_CO2_molecules</span></span>(<span>data, type_names_order)</span>
@@ -122,7 +472,7 @@ type_names_order: 原子类型顺序列表</p>
 </summary>
 <pre><code class="python">def detect_CO_CO2_molecules(data, type_names_order):
     &#34;&#34;&#34;
-    识别当前帧中的CO和CO2分子，返回当前帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。
+    识别输入帧中的CO和CO2分子，返回输入帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。
 
     Args:
 
@@ -193,7 +543,7 @@ type_names_order: 原子类型顺序列表</p>
     
     return CO_amount, CO2_amount, CO_atoms_indexes, CO2_atoms_indexes, co_molecules, co2_molecules</code></pre>
 </details>
-<div class="desc"><p>识别当前帧中的CO和CO2分子，返回当前帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。</p>
+<div class="desc"><p>识别输入帧中的CO和CO2分子，返回输入帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
@@ -215,17 +565,17 @@ type_names_order: 原子类型顺序列表</p>
 </dd>
 </dl></div>
 </dd>
-<dt id="dcg_sci_tool.detect_CO_coordinating_to_Pd"><code class="name flex">
-<span>def <span class="ident">detect_CO_coordinating_to_Pd</span></span>(<span>data, type_names_order, co_molecules, c_cutoff=3.0, o_cutoff=2.5)</span>
+<dt id="dcg_sci_tool.detect_CO_coordinating_to_PdAu"><code class="name flex">
+<span>def <span class="ident">detect_CO_coordinating_to_PdAu</span></span>(<span>data,<br>type_names_order,<br>co_molecules,<br>c_pd_cutoff=2.5,<br>o_pd_cutoff=2.1,<br>c_au_cutoff=2.5,<br>o_au_cutoff=2.2)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def detect_CO_coordinating_to_Pd(data, type_names_order, co_molecules, c_cutoff=3.0, o_cutoff=2.5):
+<pre><code class="python">def detect_CO_coordinating_to_PdAu(data, type_names_order, co_molecules, c_pd_cutoff=2.5, o_pd_cutoff=2.1, c_au_cutoff=2.5, o_au_cutoff=2.2):
     &#34;&#34;&#34;
-    识别输入帧与Pd配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。
+    识别输入帧与PdAu配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。
 
     Args:
         data (DataCollection): 结构的ovito数据集合
@@ -234,9 +584,13 @@ type_names_order: 原子类型顺序列表</p>
         
         co_molecules (list): 所有CO分子列表（包含气态），每个元素是一个元组，包含C原子序号和O原子序号
         
-        c_cutoff (float): C原子与Pd配位的距离阈值，单位为Å，默认为3.0 Å
+        cpd_cutoff (float): C原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å
         
-        o_cutoff (float): O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å
+        opd_cutoff (float): O原子与Pd配位的距离阈值，单位为Å，默认为2.1 Å
+
+        cau_cutoff (float): C原子与Au配位的距离阈值，单位为Å，默认为2.5 Å
+
+        oau_cutoff (float): O原子与Au配位的距离阈值，单位为Å，默认为2.2 Å
 
     Returns:
         tuple: CO分子信息
@@ -259,53 +613,75 @@ type_names_order: 原子类型顺序列表</p>
     
     # 分别计算C原子和O原子使用的邻居列表
     # O原子：使用较短的阈值 (o_cutoff)
-    finder_o = CutoffNeighborFinder(o_cutoff, data)
+    finder_o_pd = CutoffNeighborFinder(o_pd_cutoff, data)
     # C原子：使用较长的阈值 (c_cutoff)
-    finder_c = CutoffNeighborFinder(c_cutoff, data)
+    finder_c_pd = CutoffNeighborFinder(c_pd_cutoff, data)
+
+    finder_o_au = CutoffNeighborFinder(o_au_cutoff, data)
+
+    finder_c_au = CutoffNeighborFinder(c_au_cutoff, data)
     
     num_atoms = particles.count
-    neighbors_o = {i: [] for i in range(num_atoms)}
-    neighbors_c = {i: [] for i in range(num_atoms)}
+    neighbors_o_pd = {i: [] for i in range(num_atoms)}
+    neighbors_c_pd = {i: [] for i in range(num_atoms)}
+    neighbors_o_au = {i: [] for i in range(num_atoms)}
+    neighbors_c_au = {i: [] for i in range(num_atoms)}
     
     # 生成邻居列表
     for i in range(num_atoms):
         # O原子阈值邻居列表
-        for neighbor in finder_o.find(i):
-            neighbors_o[i].append(neighbor.index)
+        for neighbor in finder_o_pd.find(i):
+            neighbors_o_pd[i].append(neighbor.index)
         # C原子阈值邻居列表
-        for neighbor in finder_c.find(i):
-            neighbors_c[i].append(neighbor.index)
+        for neighbor in finder_c_pd.find(i):
+            neighbors_c_pd[i].append(neighbor.index)
+        # O原子与Au的邻居列表
+        for neighbor in finder_o_au.find(i):
+            neighbors_o_au[i].append(neighbor.index)
+        # C原子与Au的邻居列表
+        for neighbor in finder_c_au.find(i):
+            neighbors_c_au[i].append(neighbor.index)
     
     # 计算与Pd配位的CO分子
-    co_pd_count = 0
-    co_pd_details = []
+    co_pdau_count = 0
+    co_pdau_details = []
     
     for c_index, o_index in co_molecules:
         # 检查C原子是否与Pd配位 (使用 c_cutoff)
         c_coordinating_pds = []
-        for neighbor_index in neighbors_c[c_index]:
+        c_coordinating_aus = []
+        for neighbor_index in neighbors_c_pd[c_index]:
             if symbols[neighbor_index] == &#39;Pd&#39;:
                 c_coordinating_pds.append(neighbor_index)
+        for neighbor_index in neighbors_c_au[c_index]:
+            if symbols[neighbor_index] == &#39;Au&#39;:
+                c_coordinating_aus.append(neighbor_index)
         
         # 检查O原子是否与Pd配位 (使用 o_cutoff)
         o_coordinating_pds = []
-        for neighbor_index in neighbors_o[o_index]:
+        o_coordinating_aus = []
+        for neighbor_index in neighbors_o_pd[o_index]:
             if symbols[neighbor_index] == &#39;Pd&#39;:
                 o_coordinating_pds.append(neighbor_index)
+        for neighbor_index in neighbors_o_au[o_index]:
+            if symbols[neighbor_index] == &#39;Au&#39;:
+                o_coordinating_aus.append(neighbor_index)
         
-        # 如果C或O与Pd配位，则计为与Pd配位的CO分子
-        if c_coordinating_pds or o_coordinating_pds:
-            co_pd_count += 1
-            co_pd_details.append({
+        # 如果C或O与Pd或Au配位，则计为与PdAu配位的CO分子
+        if c_coordinating_pds or o_coordinating_pds or c_coordinating_aus or o_coordinating_aus:
+            co_pdau_count += 1
+            co_pdau_details.append({
                 &#39;co&#39;: (c_index, o_index),
                 &#39;c_pd_neighbors&#39;: c_coordinating_pds,
-                &#39;o_pd_neighbors&#39;: o_coordinating_pds
+                &#39;c_au_neighbors&#39;: c_coordinating_aus,
+                &#39;o_pd_neighbors&#39;: o_coordinating_pds,
+                &#39;o_au_neighbors&#39;: o_coordinating_aus
             })
     
     total_co = len(co_molecules)
-    return co_pd_count, total_co, co_pd_details</code></pre>
+    return co_pdau_count, total_co, co_pdau_details</code></pre>
 </details>
-<div class="desc"><p>识别输入帧与Pd配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。</p>
+<div class="desc"><p>识别输入帧与PdAu配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
@@ -314,10 +690,14 @@ type_names_order: 原子类型顺序列表</p>
 <dd>原子类型名称列表，索引对应原子类型编号</dd>
 <dt><strong><code>co_molecules</code></strong> :&ensp;<code>list</code></dt>
 <dd>所有CO分子列表（包含气态），每个元素是一个元组，包含C原子序号和O原子序号</dd>
-<dt><strong><code>c_cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>C原子与Pd配位的距离阈值，单位为Å，默认为3.0 Å</dd>
-<dt><strong><code>o_cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å</dd>
+<dt><strong><code>cpd_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>C原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å</dd>
+<dt><strong><code>opd_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>O原子与Pd配位的距离阈值，单位为Å，默认为2.1 Å</dd>
+<dt><strong><code>cau_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>C原子与Au配位的距离阈值，单位为Å，默认为2.5 Å</dd>
+<dt><strong><code>oau_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>O原子与Au配位的距离阈值，单位为Å，默认为2.2 Å</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -448,8 +828,12 @@ type_names_order: 原子类型顺序列表</p>
     N_O2, O2_indices, O2_pairs = detect_O2_molecules(data, type_names_order)
     N_CO, N_CO2, CO_list, CO2_list, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
     N_single_O, single_O_indices = detect_single_adsorbed_O(data, type_names_order)
-    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, 
-                                                                       co_molecules,c_cutoff=3.0, o_cutoff=2.5)
+    co_pdau_count, total_co, co_pd_details = detect_CO_coordinating_to_PdAu(data, 
+                                                                    type_names_order, 
+                                                                    co_molecules,
+                                                                    c_pd_cutoff=3.0, 
+                                                                    o_pd_cutoff=2.5,
+                                                                    )
     
     # 需要删除的气态分子原子索引
     gas_atoms_to_delete = set()
@@ -633,11 +1017,12 @@ type_names_order: 原子类型顺序列表</p>
     &#34;&#34;&#34;
     with open(trajectory_file, &#39;r&#39;, encoding=&#39;utf-8&#39;) as f:
         n_atoms = int(f.readline().strip())
-        f.readline()  # 跳过注释行
-        
+        f.readline() #跳过注释行
+        species_column_index = get_xyz_prop_columns(trajectory_file,&#39;species&#39;)[0]
+
         types = []
         for _ in range(n_atoms):
-            atom_type = f.readline().split()[1] # 假设原子类型在第二列
+            atom_type = f.readline().split()[species_column_index] # 假设原子类型在第二列
             if not atom_type.isdigit():  # 过滤数字
                 types.append(atom_type)
     
@@ -659,6 +1044,434 @@ type_names_order: 原子类型顺序列表</p>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>element_list (list): 第一个构型中所有原子类型的列表，保持原始顺序</p></div>
+</dd>
+<dt id="dcg_sci_tool.find_cluster_surface_hollow_sites"><code class="name flex">
+<span>def <span class="ident">find_cluster_surface_hollow_sites</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>max_triangle_side: float = 4.0,<br>cutoff: float = 3.5,<br>CN_threshold: int = 12) ‑> list</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_cluster_surface_hollow_sites(data: DataCollection, type_names_order: list, 
+                                     max_triangle_side: float = 4.0, cutoff: float = 3.5, CN_threshold: int = 12) -&gt; list:
+    &#34;&#34;&#34;
+    
+    输出PdAu团簇表面构成Hollow位点的三原子对，每个三原子对由三个原子索引组成，且满足三原子之间的边长不超过max_triangle_side。
+    默认处理对象为致密、严格对称的结构（如代码生成的PdAu标准正二十面体团簇），
+    对于MD或者MD帧优化得到的结构，建议调整cutoff和CN_threshold参数以适用更广泛的情况。
+
+    Args:
+        data (DataCollection): OVITO 数据对象，包含原子结构信息
+        type_names_order (list): 原子类型名称顺序列表，索引对应原子类型编号
+        max_triangle_side (float): 构成Hollow位点的三原子之间的最大边长，单位为 Å（默认 4.0 Å）
+        cutoff (float): 配位数计算的截断距离，单位为 Å（默认 3.5 Å，适用于致密、严格对称的结构）
+        CN_threshold (int): 体相配位数阈值，用于判断原子是否位于表面（默认 12）
+    Returns:
+        hollowSites (list): 位于 PdAu 簇表面的Hollow位点三原子索引列表，每个元素为一个包含三个原子索引的元组
+    
+    
+    
+    &#34;&#34;&#34;
+    hollowSites = set()
+    
+    surface_indices = get_pdau_surface_atoms(data, type_names_order, cutoff = cutoff, CN_threshold = CN_threshold)
+    surface_positions = data.particles.positions[surface_indices]
+
+
+    # 构建KDTree加速查询
+    kdtree = cKDTree(surface_positions)
+    search_radius = max_triangle_side * 1.2
+    
+    for i, idx_i in enumerate(surface_indices):
+        current_pos = kdtree.data[i]
+        neighbor_indices = kdtree.query_ball_point(current_pos, search_radius)
+        neighbor_indices = [idx for idx in neighbor_indices if idx != i]
+        
+        if len(neighbor_indices) &lt; 2:
+            continue
+            
+        for j in range(len(neighbor_indices)):
+            j_idx = neighbor_indices[j]
+            pos_j = kdtree.data[j_idx]
+            distance_ij = np.linalg.norm(current_pos - pos_j)
+            
+            if distance_ij &gt; max_triangle_side:
+                continue
+                
+            for k in range(j + 1, len(neighbor_indices)):
+                k_idx = neighbor_indices[k]
+                pos_k = kdtree.data[k_idx]
+                distance_ik = np.linalg.norm(current_pos - pos_k)
+                distance_jk = np.linalg.norm(pos_j - pos_k)
+                
+                if (distance_ik &lt;= max_triangle_side and distance_jk &lt;= max_triangle_side):
+                    orig_idx_i = surface_indices[i]
+                    orig_idx_j = surface_indices[j_idx] 
+                    orig_idx_k = surface_indices[k_idx]
+                    triangle = tuple(sorted([orig_idx_i, orig_idx_j, orig_idx_k]))
+                    hollowSites.add(triangle)
+
+    
+    return hollowSites</code></pre>
+</details>
+<div class="desc"><p>输出PdAu团簇表面构成Hollow位点的三原子对，每个三原子对由三个原子索引组成，且满足三原子之间的边长不超过max_triangle_side。
+默认处理对象为致密、严格对称的结构（如代码生成的PdAu标准正二十面体团簇），
+对于MD或者MD帧优化得到的结构，建议调整cutoff和CN_threshold参数以适用更广泛的情况。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>OVITO 数据对象，包含原子结构信息</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称顺序列表，索引对应原子类型编号</dd>
+<dt><strong><code>max_triangle_side</code></strong> :&ensp;<code>float</code></dt>
+<dd>构成Hollow位点的三原子之间的最大边长，单位为 Å（默认 4.0 Å）</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>配位数计算的截断距离，单位为 Å（默认 3.5 Å，适用于致密、严格对称的结构）</dd>
+<dt><strong><code>CN_threshold</code></strong> :&ensp;<code>int</code></dt>
+<dd>体相配位数阈值，用于判断原子是否位于表面（默认 12）</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>hollowSites (list): 位于 PdAu 簇表面的Hollow位点三原子索引列表，每个元素为一个包含三个原子索引的元组</p></div>
+</dd>
+<dt id="dcg_sci_tool.find_elements_exclusively_frames"><code class="name flex">
+<span>def <span class="ident">find_elements_exclusively_frames</span></span>(<span>filename: str, allowed_elements={'O', 'Pd', 'C'})</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_elements_exclusively_frames(filename:str,allowed_elements={&#39;Pd&#39;, &#39;O&#39;, &#39;C&#39;}):
+    &#34;&#34;&#34;
+    找出.xyz轨迹中只含指定元素的帧
+
+    Args:
+        filename (str): XYZ文件路径
+        allowed_elements (set): 允许的元素集合，默认为{&#39;Pd&#39;, &#39;O&#39;, &#39;C&#39;}
+    Returns:
+        target_frames (list): 只含指定元素的帧索引列表
+    &#34;&#34;&#34;
+    target_frames = []
+    
+    with open(filename, &#39;r&#39;) as f:
+        lines = f.readlines()
+    
+    i = 0
+    frame_idx = 0
+    
+    while i &lt; len(lines):
+        # 读取原子数
+        if not lines[i].strip():
+            i += 1
+            continue
+            
+        try:
+            natoms = int(lines[i].strip())
+        except:
+            i += 1
+            continue
+        
+        # 检查该帧元素
+        elements = set()
+        for j in range(2, 2 + natoms):  # 跳过原子数和注释行
+            if i + j &lt; len(lines):
+                parts = lines[i + j].strip().split()
+                if parts:
+                    elements.add(parts[0])
+        
+        # 判断是否只含指定元素
+        if elements == set(allowed_elements):
+            target_frames.append(frame_idx)
+        
+        i += 2 + natoms
+        frame_idx += 1
+    
+    return target_frames</code></pre>
+</details>
+<div class="desc"><p>找出.xyz轨迹中只含指定元素的帧</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>XYZ文件路径</dd>
+<dt><strong><code>allowed_elements</code></strong> :&ensp;<code>set</code></dt>
+<dd>允许的元素集合，默认为{'Pd', 'O', 'C'}</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>target_frames (list): 只含指定元素的帧索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.find_matching_files"><code class="name flex">
+<span>def <span class="ident">find_matching_files</span></span>(<span>directory: str, pattern: str = None) ‑> List[str]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_matching_files(directory: str, pattern: str = None) -&gt; List[str]:
+    &#34;&#34;&#34;
+    查找目录下所有满足正则表达式的文件名（不搜索子目录）
+    
+    参数:
+    ----------
+    directory : str
+        要搜索的目录路径
+    pattern : str, 可选
+        正则表达式模式，如果为None则使用默认模式
+        
+    返回:
+    -------
+    List[str]
+        匹配的文件名列表
+    &#34;&#34;&#34;
+    if pattern is None:
+        # 您提供的正则表达式模式
+        print(&#34;No pattern provided&#34;)
+        return []
+    
+    # 编译正则表达式
+    regex = re.compile(pattern)
+    
+    matching_files = []
+    
+    # 只搜索当前目录，不使用os.walk
+    try:
+        # 获取指定目录中的所有文件和子目录
+        items = os.listdir(directory)
+        
+        for item in items:
+            # 构建完整路径
+            item_path = os.path.join(directory, item)
+            
+            # 检查是否是文件（不是目录）
+            if os.path.isfile(item_path):
+                # 检查文件名是否匹配正则表达式
+
+                # 只包含纯净的文件名，不包含路径
+                if regex.fullmatch(item):
+                    matching_files.append(item)
+    except FileNotFoundError:
+        print(f&#34;目录不存在: {directory}&#34;)
+    except PermissionError:
+        print(f&#34;没有权限访问目录: {directory}&#34;)
+    except Exception as e:
+        print(f&#34;读取目录时发生错误: {e}&#34;)
+    
+    return matching_files</code></pre>
+</details>
+<div class="desc"><p>查找目录下所有满足正则表达式的文件名（不搜索子目录）</p>
+<h2 id="_1">参数:</h2>
+<p>directory : str
+要搜索的目录路径
+pattern : str, 可选
+正则表达式模式，如果为None则使用默认模式</p>
+<h2 id="_2">返回:</h2>
+<p>List[str]
+匹配的文件名列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.find_nearest_hollow_site"><code class="name flex">
+<span>def <span class="ident">find_nearest_hollow_site</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>c_index: int,<br>o_index: int) ‑> pyparsing.core.Dict</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_nearest_hollow_site(data: DataCollection, type_names_order: list, c_index: int, o_index: int) -&gt; Dict:
+    &#34;&#34;&#34;
+    找到距离C-O中点最近的hollow位点
+
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+        c_index (int): 目标C原子索引
+
+        o_index (int): 目标O原子索引
+
+    Returns:
+
+        nearest_hollow_indexes (list): 最近的Hollow位点对应的金属原子序号列表（长度为3）
+
+        nearby_hollow_sites_count (int): C-O中点附近合理的Hollow位点数量
+
+    &#34;&#34;&#34;
+    max_triangle_side = 4.0  # 定义三角形边长的最大值，单位为Å
+
+    particles = data.particles
+    
+    if particles is None:
+        return {&#39;error&#39;: &#39;无法读取粒子数据&#39;}
+    
+    # 获取原子信息
+    positions = particles.positions[...]
+    types = data.particles.particle_types[...]
+
+    symbols = np.array([type_names_order[t-1] for t in types])
+    num_atoms = particles.count
+    
+    # 验证输入原子序号
+    if c_index &gt;= num_atoms:
+        return {&#39;error&#39;: f&#39;C原子序号 {c_index} 超出范围 (总原子数: {num_atoms})&#39;}
+    if o_index &gt;= num_atoms:
+        return {&#39;error&#39;: f&#39;O原子序号 {o_index} 超出范围 (总原子数: {num_atoms})&#39;}
+    if symbols[c_index] != &#39;C&#39;:
+        return {&#39;error&#39;: f&#39;原子 {c_index} 不是C原子 (实际类型: {symbols[c_index]})&#39;}
+    if symbols[o_index] != &#39;O&#39;:
+        return {&#39;error&#39;: f&#39;原子 {o_index} 不是O原子 (实际类型: {symbols[o_index]})&#39;}
+    
+    # 计算C-O连线中点坐标
+    c_pos = positions[c_index]
+    o_pos = positions[o_index]
+    midpoint = (c_pos + o_pos) / 2.0
+    co_distance = np.linalg.norm(c_pos - o_pos)
+    
+    print(f&#34;C-O距离: {co_distance:.3f} Å&#34;)
+    print(f&#34;C-O中点坐标: ({midpoint[0]:.3f}, {midpoint[1]:.3f}, {midpoint[2]:.3f})&#34;)
+    
+    # 获取与C/O成键的金属原子
+    bonded_metal_atoms = get_OC_bonded_metal_atoms(data, type_names_order, c_index, o_index)
+    print(f&#34;与C/O成键的金属原子数量: {len(bonded_metal_atoms)}&#34;)
+    
+  
+    if len(bonded_metal_atoms) &lt; 3:
+        return {&#39;error&#39;: &#39;与C/O成键的表面金属原子数量不足，无法形成Hollow位点&#39;}
+    
+    # 寻找最近的Hollow位点
+    nearest_hollow_indexes = []
+    min_distance = float(&#39;inf&#39;)
+    nearby_hollow_sites_count = 0
+    
+    # 生成候选三角形组合
+    geometric_triangles = list(combinations(bonded_metal_atoms, 3))
+    
+    for triangle in geometric_triangles:
+        idx_a, idx_b, idx_c = triangle
+        
+        # 计算三角形边长
+        pos_a, pos_b, pos_c = positions[idx_a], positions[idx_b], positions[idx_c]
+        side_ab = np.linalg.norm(pos_a - pos_b)
+        side_bc = np.linalg.norm(pos_b - pos_c)
+        side_ca = np.linalg.norm(pos_c - pos_a)
+        
+        # 检查三角形边长是否合理
+        if side_ab &gt; max_triangle_side or side_bc &gt; max_triangle_side or side_ca &gt; max_triangle_side:
+            continue
+        
+        # 计算三角形中心（Hollow位点）
+        center = (pos_a + pos_b + pos_c) / 3.0
+        
+
+        nearby_hollow_sites_count += 1
+        
+        # 计算到C-O中点的距离
+        distance_to_midpoint = np.linalg.norm(center - midpoint)
+        
+        # 更新最近Hollow位点
+        if distance_to_midpoint &lt; min_distance:
+            min_distance = distance_to_midpoint
+            nearest_hollow_indexes = [idx_a, idx_b, idx_c]
+    
+    if nearest_hollow_indexes is None:
+        return {&#39;error&#39;: &#39;未找到有效的Hollow位点&#39;}
+
+    
+    return nearest_hollow_indexes, nearby_hollow_sites_count</code></pre>
+</details>
+<div class="desc"><p>找到距离C-O中点最近的hollow位点</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>c_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>目标C原子索引</dd>
+<dt><strong><code>o_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>目标O原子索引</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>nearest_hollow_indexes (list): 最近的Hollow位点对应的金属原子序号列表（长度为3）</p>
+<p>nearby_hollow_sites_count (int): C-O中点附近合理的Hollow位点数量</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_OC_bonded_metal_atoms"><code class="name flex">
+<span>def <span class="ident">get_OC_bonded_metal_atoms</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>c_index: int,<br>o_index: int) ‑> List[int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_OC_bonded_metal_atoms(data: DataCollection, type_names_order: list, c_index: int, o_index: int  
+                          ) -&gt; List[int]:
+    &#34;&#34;&#34;获取与目标C和目标O原子成键的金属原子序号列表
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+
+        c_index (int): 目标C原子索引
+
+        o_index (int): 目标O原子索引
+    Returns:
+        bonded_metal_atoms (list): 与C和O原子成键的金属原子索引列表
+    &#34;&#34;&#34;
+    bond_cutoffs = {
+    &#39;Au-C&#39;: 2.5,
+    &#39;Au-O&#39;: 2.2,
+    &#39;Pd-C&#39;: 2.5,
+    &#39;Pd-O&#39;: 2.1
+}
+    particles = data.particles
+    
+    if particles is None:
+        return {&#39;error&#39;: &#39;无法读取粒子数据&#39;}
+    
+    # 获取原子信息
+    positions = data.particles.positions[...]
+    types = data.particles.particle_types[...]
+
+    symbols = np.array([type_names_order[t-1] for t in types])
+    num_atoms = particles.count
+    bonded_metal_atoms = set()
+    c_pos = positions[c_index]
+    o_pos = positions[o_index]
+    
+    for i in range(num_atoms):
+        if symbols[i] in [&#39;Pd&#39;, &#39;Au&#39;]:  # 只考虑金属原子
+            atom_pos = positions[i]
+            metal_type = symbols[i]
+            
+            # 检查是否与C原子成键
+            distance_to_c = np.linalg.norm(atom_pos - c_pos)
+            c_cutoff = bond_cutoffs[f&#39;{metal_type}-C&#39;]
+            if distance_to_c &lt;= c_cutoff:
+                bonded_metal_atoms.add(i)
+                continue
+            
+            # 检查是否与O原子成键
+            distance_to_o = np.linalg.norm(atom_pos - o_pos)
+            o_cutoff = bond_cutoffs[f&#39;{metal_type}-O&#39;]
+            if distance_to_o &lt;= o_cutoff:
+                bonded_metal_atoms.add(i)
+    
+    return list(bonded_metal_atoms)</code></pre>
+</details>
+<div class="desc"><p>获取与目标C和目标O原子成键的金属原子序号列表</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>c_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>目标C原子索引</dd>
+<dt><strong><code>o_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>目标O原子索引</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>bonded_metal_atoms (list): 与C和O原子成键的金属原子索引列表</p></div>
 </dd>
 <dt id="dcg_sci_tool.get_atoms_near_point"><code class="name flex">
 <span>def <span class="ident">get_atoms_near_point</span></span>(<span>data: ovito.data.DataCollection, point: numpy.ndarray, cutoff: float = 5.0)</span>
@@ -720,6 +1533,345 @@ type_names_order: 原子类型顺序列表</p>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>atoms_within_cutoff (list): 在截断距离内的原子序号列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_hollowSite_Au_Disperation"><code class="name flex">
+<span>def <span class="ident">get_hollowSite_Au_Disperation</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: List[str],<br>hollowSite_atom_indexes: List[int]) ‑> Tuple[float, Dict]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_hollowSite_Au_Disperation(data: DataCollection, 
+                                type_names_order: List[str], 
+                                hollowSite_atom_indexes: List[int], 
+                               ) -&gt; Tuple[float, Dict]:
+    &#34;&#34;&#34;
+    计算Hollow位点外圈Au原子的离散值
+    
+    Args:
+        data: OVITO 数据对象
+        type_names_order: 原子类型名称顺序列表
+        hollowSite_atom_indexes: Hollow位点三个原子的索引列表
+    
+    Returns:
+        tuple: (disperation_value, 原子统计信息)
+    &#34;&#34;&#34;
+    # 导入数据
+    particles = data.particles
+    positions = particles.positions[...]
+    
+    # 提取原子类型
+
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    # 计算内圈三个原子的中心点
+    inner_positions = positions[hollowSite_atom_indexes]
+    center_point = np.mean(inner_positions, axis=0)
+    
+    # 统计内圈原子信息
+    inner_au_count = 0
+    inner_pd_count = 0
+    for idx in hollowSite_atom_indexes:
+        if symbols[idx] == &#39;Au&#39;:
+            inner_au_count += 1
+        elif symbols[idx] == &#39;Pd&#39;:
+            inner_pd_count += 1
+    
+    # 筛选外圈中的Au原子
+    au_outer_indices = []
+    outer_au_count = 0
+    outer_pd_count = 0
+    outer_atom_indices = get_hollowSite_outer_surface_neighbors(data, type_names_order, hollowSite_atom_indexes)
+    for idx in outer_atom_indices:
+        if symbols[idx] == &#39;Au&#39;:
+            au_outer_indices.append(idx)
+            outer_au_count += 1
+        elif symbols[idx] == &#39;Pd&#39;:
+            outer_pd_count += 1
+    
+    print(f&#34;  外圈总原子数: {len(outer_atom_indices)}, 其中Au原子数: {len(au_outer_indices)}&#34;)
+    
+    if len(au_outer_indices) == 0:
+        print(&#34;  警告: 外圈中没有找到Au原子，离散值设为1.0&#34;)
+        return 1.0, {
+            &#39;inner_total&#39;: len(hollowSite_atom_indexes),
+            &#39;inner_au_count&#39;: inner_au_count,
+            &#39;inner_pd_count&#39;: inner_pd_count,
+            &#39;outer_total&#39;: len(outer_atom_indices),
+            &#39;outer_au_count&#39;: outer_au_count,
+            &#39;outer_pd_count&#39;: outer_pd_count
+        }
+    
+    # 构建从中心点到每个外圈Au原子的向量
+    vectors = []
+    for au_idx in au_outer_indices:
+        au_position = positions[au_idx]
+        # 从中心指向外圈Au原子的向量
+        vector = au_position - center_point
+        vectors.append(vector)
+    
+    vectors = np.array(vectors)
+    
+    # 计算每个向量的单位向量
+    magnitudes = np.linalg.norm(vectors, axis=1, keepdims=True)
+    unit_vectors = vectors / magnitudes
+    
+    # 计算单位向量的矢量和
+    vector_sum = np.sum(unit_vectors, axis=0)
+    
+    # 除以N得到向量A
+    N = len(au_outer_indices)
+    vector_A = vector_sum / N
+    
+    # 计算向量A的模
+    magnitude_A = np.linalg.norm(vector_A)
+    
+    # 计算离散值: 1 - |A|
+    disperation_value = 1 - magnitude_A
+    
+    print(f&#34;  向量A的模: {magnitude_A:.6f}&#34;)
+    print(f&#34;  离散值 (1 - |A|): {disperation_value:.6f}&#34;)
+    
+    return disperation_value, {
+        &#39;inner_total&#39;: len(hollowSite_atom_indexes),
+        &#39;inner_au_count&#39;: inner_au_count,
+        &#39;inner_pd_count&#39;: inner_pd_count,
+        &#39;outer_total&#39;: len(outer_atom_indices),
+        &#39;outer_au_count&#39;: outer_au_count,
+        &#39;outer_pd_count&#39;: outer_pd_count
+    }</code></pre>
+</details>
+<div class="desc"><p>计算Hollow位点外圈Au原子的离散值</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong></dt>
+<dd>OVITO 数据对象</dd>
+<dt><strong><code>type_names_order</code></strong></dt>
+<dd>原子类型名称顺序列表</dd>
+<dt><strong><code>hollowSite_atom_indexes</code></strong></dt>
+<dd>Hollow位点三个原子的索引列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>(disperation_value, 原子统计信息)</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.get_hollowSite_outer_neighbors_with_subsurface"><code class="name flex">
+<span>def <span class="ident">get_hollowSite_outer_neighbors_with_subsurface</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>hollow_site_atom_indexes: list) ‑> List[int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_hollowSite_outer_neighbors_with_subsurface(data: DataCollection, type_names_order: list, hollow_site_atom_indexes: list) -&gt; List[int]:
+    &#34;&#34;&#34;
+    获取hollow位点外围邻居原子，包括次表层原子。
+    
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+        hollow_site_atom_indexes (list): hollow位点原子索引列表
+    Returns:
+        surface_neighbors (list): hollow位点外围表面邻居原子索引列表
+    
+    
+    &#34;&#34;&#34;
+
+    neighbor_cutoff = 3.5
+
+    particles = data.particles
+    positions = particles.positions[...]
+    types = particles.particle_types[...] # 序号从1开始
+
+    all_neighbors = set()
+
+    # 为每个Hollow位原子获取邻居（考虑次表层原子）
+    for atom_idx in hollow_site_atom_indexes:
+        for neighbor_idx in range(len(positions)):
+            if neighbor_idx in hollow_site_atom_indexes:
+                continue
+            if type_names_order[types[neighbor_idx] - 1] not in [&#39;Pd&#39;, &#39;Au&#39;]:
+                continue
+            
+            pos1 = positions[atom_idx]
+            pos2 = positions[neighbor_idx]
+            distance = np.linalg.norm(pos1 - pos2)
+            
+            if distance &lt;= neighbor_cutoff:
+                all_neighbors.add(neighbor_idx)
+
+    neighbors_list = list(all_neighbors)
+     
+    return neighbors_list</code></pre>
+</details>
+<div class="desc"><p>获取hollow位点外围邻居原子，包括次表层原子。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>hollow_site_atom_indexes</code></strong> :&ensp;<code>list</code></dt>
+<dd>hollow位点原子索引列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>surface_neighbors (list): hollow位点外围表面邻居原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_hollowSite_outer_surface_neighbors"><code class="name flex">
+<span>def <span class="ident">get_hollowSite_outer_surface_neighbors</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>hollow_site_atom_indexes: list) ‑> List[int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_hollowSite_outer_surface_neighbors(data: DataCollection, type_names_order: list, hollow_site_atom_indexes: list) -&gt; List[int]:
+    &#34;&#34;&#34;
+    获取hollow位点外围表面邻居原子
+    
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+        hollow_site_atom_indexes (list): hollow位点原git 子索引列表
+    Returns:
+        surface_neighbors (list): hollow位点外围表面邻居原子索引列表
+    
+    
+    &#34;&#34;&#34;
+
+    surface_neighbor_cutoff = 4.0       # 表面原子邻居截断半径(Å)
+    positions = data.particles.positions[...]
+
+    # 获取所有表面原子
+    surface_pdau_atoms = get_pdau_surface_atoms(data, type_names_order)
+    
+    all_neighbors = set()
+
+    # 为每个Hollow位原子获取邻居（只考虑表面原子）
+    for atom_idx in hollow_site_atom_indexes:
+        for neighbor_idx in surface_pdau_atoms:
+            if neighbor_idx in hollow_site_atom_indexes:
+                continue
+                
+            pos1 = positions[atom_idx]
+            pos2 = positions[neighbor_idx]
+            distance = np.linalg.norm(pos1 - pos2)
+            
+            if distance &lt;= surface_neighbor_cutoff:
+                all_neighbors.add(neighbor_idx)
+    
+    # 转换为列表并限制最多9个最近的表面邻居原子
+    neighbors_list = list(all_neighbors)
+    if len(neighbors_list) &gt; 9:
+        # 按距离排序，取最近的9个
+        distances = []
+        for neighbor_idx in neighbors_list:
+            min_distance = float(&#39;inf&#39;)
+            for triangle_idx in hollow_site_atom_indexes:
+                dist = np.linalg.norm(positions[neighbor_idx] - positions[triangle_idx])
+                if dist &lt; min_distance:
+                    min_distance = dist
+            distances.append((neighbor_idx, min_distance))
+        
+        distances.sort(key=lambda x: x[1])
+        neighbors_list = [idx for idx, dist in distances[:9]]
+    
+    # 验证所有邻居原子都是表面原子
+    surface_neighbors = []
+    for neighbor_idx in neighbors_list:
+        if neighbor_idx in surface_pdau_atoms:
+            surface_neighbors.append(neighbor_idx)
+        else:
+            print(f&#34;警告: 原子 {neighbor_idx} 被识别为邻居但不是表面原子，已过滤&#34;)
+    
+    return surface_neighbors</code></pre>
+</details>
+<div class="desc"><p>获取hollow位点外围表面邻居原子</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>hollow_site_atom_indexes</code></strong> :&ensp;<code>list</code></dt>
+<dd>hollow位点原git 子索引列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>surface_neighbors (list): hollow位点外围表面邻居原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_local_minima_sides_of_peak"><code class="name flex">
+<span>def <span class="ident">get_local_minima_sides_of_peak</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_local_minima_sides_of_peak():
+    &#34;&#34;&#34;
+    读取跑lmps-neb获得的neb_mep.dat文件，找到处于能量峰值两侧的局部最小值对应的序号，
+    如果没有，则输出端点序号（0或最大序号），并根据序号和result.xyz，
+    输出相应的.xyz文件:mid_IS.xyz和mid_FS.xyz。
+    &#34;&#34;&#34;
+
+    # 读取文件第四列数据
+    fourth_column = []
+    with open(&#39;neb_mep.dat&#39;, &#39;r&#39;) as file:
+        for line in file:
+            line = line.strip()
+            if line and not line.startswith(&#39;#&#39;):  # 跳过空行和注释行
+                columns = line.split()
+                if len(columns) &gt;= 4:
+                    try:
+                        fourth_column.append(float(columns[3]))
+                    except ValueError:
+                        continue
+    
+    if not fourth_column:
+        return
+    
+    # 找到最大元素的位置
+    max_index = fourth_column.index(max(fourth_column))
+    result_indices = []
+    
+    # 向左搜索
+    if max_index &gt; 0:  # 如果不是第一个元素
+        for i in range(max_index - 1, -1, -1):
+            if fourth_column[i] &gt; fourth_column[i + 1]:
+                result_indices.append(i + 1)
+                break
+        else:  # 如果搜索到数组开头都没有停止
+            result_indices.append(0)
+    else:  # 如果最大元素就是第一个元素
+        result_indices.append(0)
+    
+    # 向右搜索
+    if max_index &lt; len(fourth_column) - 1:  # 如果不是最后一个元素
+        for i in range(max_index + 1, len(fourth_column)):
+            if fourth_column[i] &gt; fourth_column[i - 1]:
+                result_indices.append(i - 1)
+                break
+        else:  # 如果搜索到数组末尾都没有停止
+            result_indices.append(len(fourth_column) - 1)
+    else:  # 如果最大元素就是最后一个元素
+        result_indices.append(len(fourth_column) - 1)
+    
+    # 按从小到大的顺序输出
+    result_indices.sort()
+    # print(f&#34;{result_indices[0]} {result_indices[1]}&#34;)
+    if result_indices[0] != 0 or result_indices[1] != len(fourth_column) - 1:
+        structs=read(&#39;result.xyz&#39;,&#39;:&#39;)
+        write(&#39;mid_IS.xyz&#39;,structs[result_indices[0]])
+        write(&#39;mid_FS.xyz&#39;,structs[result_indices[1]])
+    return result_indices[0],result_indices[1]</code></pre>
+</details>
+<div class="desc"><p>读取跑lmps-neb获得的neb_mep.dat文件，找到处于能量峰值两侧的局部最小值对应的序号，
+如果没有，则输出端点序号（0或最大序号），并根据序号和result.xyz，
+输出相应的.xyz文件:mid_IS.xyz和mid_FS.xyz。</p></div>
 </dd>
 <dt id="dcg_sci_tool.get_pdau_cluster_center"><code class="name flex">
 <span>def <span class="ident">get_pdau_cluster_center</span></span>(<span>data: ovito.data.DataCollection, type_names_order: list)</span>
@@ -796,6 +1948,255 @@ type_names_order: 原子类型顺序列表</p>
 <dd>如果未找到 Pd 或 Au 原子</dd>
 </dl></div>
 </dd>
+<dt id="dcg_sci_tool.get_pdau_surface_atoms"><code class="name flex">
+<span>def <span class="ident">get_pdau_surface_atoms</span></span>(<span>data, type_names_order, cutoff=4.0, CN_threshold=12)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_pdau_surface_atoms(data, type_names_order, cutoff=4.0, CN_threshold=12):
+    &#34;&#34;&#34;
+    获取位于 PdAu 簇表面的原子索引列表，基于配位数。
+
+    对于致密、严格对称的结构（如代码生成的PdAu标准正二十面体团簇）：
+
+        cutoff = 3.5, CN_threshold = 12
+
+    对于MD或者MD帧优化得到的结构：
+    
+        cutoff = 4.0, CN_thershold = 12
+
+    Args:
+        data (DataCollection): OVITO 数据对象，包含原子结构信息
+        type_names_order (list): 原子类型名称顺序列表
+        cutoff (float): 配位数计算的截断距离，单位为 Å（默认 4.0 Å，可取范围内尽量取大，增大适用范围）
+        CN_thershold (int): 体相配位数阈值，用于判断原子是否位于表面（默认 12）
+
+    Returns:
+        surface_atoms (list): 位于 PdAu 簇表面的原子索引列表
+    &#34;&#34;&#34;
+    positions = data.particles.positions[...]
+    types = data.particles.particle_types[...]
+
+    if positions is None or types is None:
+        raise ValueError(&#34;数据对象不包含粒子位置或类型信息&#34;)
+
+    if len(positions) != len(types):
+        raise ValueError(&#34;原子位置和类型数量不匹配&#34;)
+
+    if not type_names_order:
+        raise ValueError(&#34;type_names_order 列表不能为空&#34;)
+
+    symbols = [type_names_order[t - 1] for t in types]
+
+    pdau_indices = [i for i, symbol in enumerate(symbols) if symbol in [&#34;Pd&#34;, &#34;Au&#34;]]
+    surface_atoms = []
+
+    for i in pdau_indices:
+        pdau_neighbors = []
+        # 计算与 PdAu 簇中其他原子的配位数
+        neighbor_finder = CutoffNeighborFinder(cutoff, data)
+        neighbors = neighbor_finder.find(i)
+        for neighbor in neighbors:
+            if neighbor.index in pdau_indices:
+                pdau_neighbors.append(neighbor.index)
+
+        # 根据配位数判断是否为表面原子
+        if len(pdau_neighbors) &lt; CN_threshold:  # 体相配位数为 CN_thershold
+            surface_atoms.append(i)
+
+    return surface_atoms</code></pre>
+</details>
+<div class="desc"><p>获取位于 PdAu 簇表面的原子索引列表，基于配位数。</p>
+<p>对于致密、严格对称的结构（如代码生成的PdAu标准正二十面体团簇）：</p>
+<pre><code>cutoff = 3.5, CN_threshold = 12
+</code></pre>
+<p>对于MD或者MD帧优化得到的结构：</p>
+<pre><code>cutoff = 4.0, CN_thershold = 12
+</code></pre>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>OVITO 数据对象，包含原子结构信息</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称顺序列表</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>配位数计算的截断距离，单位为 Å（默认 4.0 Å，可取范围内尽量取大，增大适用范围）</dd>
+<dt><strong><code>CN_thershold</code></strong> :&ensp;<code>int</code></dt>
+<dd>体相配位数阈值，用于判断原子是否位于表面（默认 12）</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>surface_atoms (list): 位于 PdAu 簇表面的原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_reactants_ad_config"><code class="name flex">
+<span>def <span class="ident">get_reactants_ad_config</span></span>(<span>input_file,<br>c_index,<br>o_index,<br>c_pd_cutoff=2.5,<br>o_pd_cutoff=2.1,<br>c_au_cutoff=2.5,<br>o_au_cutoff=2.2)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_reactants_ad_config(input_file, c_index, o_index, c_pd_cutoff = 2.5, o_pd_cutoff = 2.1, c_au_cutoff = 2.5, o_au_cutoff = 2.2):
+    &#34;&#34;&#34;
+    Get the adsorption configuration of reactant atoms.
+
+    Args:
+        input_file (str): Path to the input file containing the structure and related data
+                
+        c_index (int): Index of the C atom in the reactant CO molecule
+        
+        o_index (int): Index of the O atom in the reactant CO molecule
+        
+        c_pd_cutoff (float): Cutoff distance for C atom coordination with Pd, default is 2.5 Å
+        
+        o_pd_cutoff (float): Cutoff distance for O atom coordination with Pd, default is 2.1 Å
+
+        c_au_cutoff (float): Cutoff distance for C atom coordination with Au, default is 2.5 Å
+
+        o_au_cutoff (float): Cutoff distance for O atom coordination with Au, default is 2.2 Å
+
+    Returns:
+
+        tuple: Adsorption configuration information
+        
+            c_pdau_info (str): Adsorption configuration information for the C atom, including element type and geometry
+            
+            o_pdau_info (str): Adsorption configuration information for the O atom, including element type and geometry
+    
+    &#34;&#34;&#34;
+    # Load the structure and related data from the input file
+    pipeline = import_file(input_file)
+    data = pipeline.compute(frame=0)  # 只根据第一帧获取要保留的原子索引和旋转目标向量，后续帧使用相同的索引进行处理
+    type_names_order = extract_atom_types(input_file)
+
+
+    particles = data.particles
+
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    # 分别计算C原子和O原子使用的邻居列表
+    # O原子：使用较短的阈值 (o_cutoff)
+    finder_o_pd = CutoffNeighborFinder(o_pd_cutoff, data)
+    # C原子：使用较长的阈值 (c_cutoff)
+    finder_c_pd = CutoffNeighborFinder(c_pd_cutoff, data)
+    finder_o_au = CutoffNeighborFinder(o_au_cutoff, data)
+    finder_c_au = CutoffNeighborFinder(c_au_cutoff, data)
+    
+
+
+    num_atoms = particles.count
+    neighbors_o_pd = {i: [] for i in range(num_atoms)}
+    neighbors_c_pd = {i: [] for i in range(num_atoms)}
+    neighbors_o_au = {i: [] for i in range(num_atoms)}
+    neighbors_c_au = {i: [] for i in range(num_atoms)}
+    
+    # 生成邻居列表
+    for i in range(num_atoms):
+        # O原子阈值邻居列表
+        for neighbor in finder_o_pd.find(i):
+            if symbols[neighbor.index] == &#39;Pd&#39;:
+                neighbors_o_pd[i].append(neighbor.index)
+        # C原子阈值邻居列表
+        for neighbor in finder_c_pd.find(i):
+            if symbols[neighbor.index] == &#39;Pd&#39;:
+                neighbors_c_pd[i].append(neighbor.index)
+        # O原子与Au的邻居列表
+        for neighbor in finder_o_au.find(i):
+            if symbols[neighbor.index] == &#39;Au&#39;:
+                neighbors_o_au[i].append(neighbor.index)
+        # C原子与Au的邻居列表
+        for neighbor in finder_c_au.find(i):
+            if symbols[neighbor.index] == &#39;Au&#39;:
+                neighbors_c_au[i].append(neighbor.index)
+
+
+
+    c_pd_cn = len(neighbors_c_pd[c_index])
+    o_pd_cn = len(neighbors_o_pd[o_index])
+    c_au_cn = len(neighbors_c_au[c_index])
+    o_au_cn = len(neighbors_o_au[o_index])
+
+    if c_pd_cn + c_au_cn == 1:
+        geometry_info = &#39;top&#39;
+        element_info = &#39;Pd&#39; if c_pd_cn == 1 else &#39;Au&#39;
+    elif c_pd_cn + c_au_cn == 2:
+        geometry_info = &#39;bridge&#39;
+        if c_pd_cn == 2:
+            element_info = &#39;Pd2&#39;
+        elif c_pd_cn == 1:
+            element_info = &#39;PdAu&#39;
+        else:
+            element_info = &#39;Au2&#39;
+    elif c_pd_cn + c_au_cn == 3:
+        geometry_info = &#39;hollow&#39;
+        if c_pd_cn == 3:
+            element_info = &#39;Pd3&#39;
+        elif c_pd_cn == 2:
+            element_info = &#39;Pd2Au&#39;
+        elif c_pd_cn == 1:
+            element_info = &#39;PdAu2&#39;
+        else:
+            element_info = &#39;Au3&#39;
+
+    c_pdau_info = f&#34;{element_info} {geometry_info}&#34; 
+
+    if o_pd_cn + o_au_cn== 1:
+        geometry_info = &#39;top&#39;
+        element_info = &#39;Pd&#39; if o_pd_cn == 1 else &#39;Au&#39;
+    elif o_pd_cn + o_au_cn == 2:
+        geometry_info = &#39;bridge&#39;
+        if o_pd_cn == 2:
+            element_info = &#39;Pd2&#39;
+        elif o_pd_cn == 1:
+            element_info = &#39;PdAu&#39;
+        else:
+            element_info = &#39;Au2&#39;
+    elif o_pd_cn + o_au_cn == 3:
+        geometry_info = &#39;hollow&#39;
+        if o_pd_cn == 3:
+            element_info = &#39;Pd3&#39;
+        elif o_pd_cn == 2:
+            element_info = &#39;Pd2Au&#39;
+        elif o_pd_cn == 1:
+            element_info = &#39;PdAu2&#39;
+        else:
+            element_info = &#39;Au3&#39;
+
+    o_pdau_info = f&#34;{element_info} {geometry_info}&#34;
+
+    return c_pdau_info, o_pdau_info</code></pre>
+</details>
+<div class="desc"><p>Get the adsorption configuration of reactant atoms.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>Path to the input file containing the structure and related data</dd>
+<dt><strong><code>c_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>Index of the C atom in the reactant CO molecule</dd>
+<dt><strong><code>o_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>Index of the O atom in the reactant CO molecule</dd>
+<dt><strong><code>c_pd_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>Cutoff distance for C atom coordination with Pd, default is 2.5 Å</dd>
+<dt><strong><code>o_pd_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>Cutoff distance for O atom coordination with Pd, default is 2.1 Å</dd>
+<dt><strong><code>c_au_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>Cutoff distance for C atom coordination with Au, default is 2.5 Å</dd>
+<dt><strong><code>o_au_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>Cutoff distance for O atom coordination with Au, default is 2.2 Å</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>Adsorption configuration information</p>
+<p>c_pdau_info (str): Adsorption configuration information for the C atom, including element type and geometry</p>
+<p>o_pdau_info (str): Adsorption configuration information for the O atom, including element type and geometry</p>
+</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.get_reaction_local_atoms_list"><code class="name flex">
 <span>def <span class="ident">get_reaction_local_atoms_list</span></span>(<span>data, type_names_order, c_index, o_index, cutoff=6.0)</span>
 </code></dt>
@@ -826,7 +2227,7 @@ type_names_order: 原子类型顺序列表</p>
     &#34;&#34;&#34; 
     # 2. 检测所有分子类型
     CO_amount, CO2_amount, CO_atoms_indexes, CO2_atoms_indexes, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
-    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_Pd(data, type_names_order, co_molecules)
+    co_pd_count, total_co, co_pd_details = detect_CO_coordinating_to_PdAu(data, type_names_order, co_molecules)
 
     # 3. 识别气态分子原子
     gases_atoms = detect_gas_molecules_for_deletion(data, type_names_order)
@@ -946,7 +2347,7 @@ type_names_order: 原子类型顺序列表</p>
 
 
     # 创建新的结构对象，包含所有原子但只保留反应局部结构的原子类型
-    filtered_struct = create_filtered_structure(data, keep_indexes, type_names_order)
+    filtered_struct = create_filtered_structure(data, type_names_order,keep_indexes)
     # 将结构旋转，使得目标向量与-Y轴同向
     rotated_struct = rotate_v1_around_p_to_v2(
         atoms=filtered_struct,
@@ -986,6 +2387,218 @@ new_cell : np.ndarray 或 list/tuple
 rotated_translated_struct : Atoms
 旋转并平移后的ASE Atoms对象</p></div>
 </dd>
+<dt id="dcg_sci_tool.get_traj_focusing_reaction_site"><code class="name flex">
+<span>def <span class="ident">get_traj_focusing_reaction_site</span></span>(<span>traj_file, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_traj_focusing_reaction_site(traj_file, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None):
+   &#34;&#34;&#34;
+   输入原始MD-neb结构文件，输出经过处理后的结构文件，将反应局部结构聚焦到小晶胞中，
+   并使ovito观察视线方向（Y轴）经过反应区域和团簇中心
+   输出聚焦后的结构文件（ASE ATOMS类）
+   
+   参数:
+   ----------
+   traj_file : str
+      原始MD-neb结构文件路径
+   c_index : int
+      反应物CO的C原子的索引
+   o_index : int
+      反应物O原子的索引
+   cutoff : float
+      截止距离，单位为Å，默认为6.0
+   target_vector : np.ndarray 或 list/tuple
+      目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+   new_cell : np.ndarray 或 list/tuple
+      新的晶胞尺寸，形状为(3,)，如 [a, b, c]
+   
+   返回:
+   ----------
+      返回旋转并平移后的neb轨迹对象
+   focused_traj : list of Atoms
+      旋转并平移后的ASE Atoms对象列表
+   new_indexes : list
+      旋转并平移后的结构中，原始索引old_indexes对应的新的原子索引列表
+   &#34;&#34;&#34;
+   pipeline = import_file(traj_file)
+   data = pipeline.compute(frame=0)  # 只根据第一帧获取要保留的原子索引和旋转目标向量，后续帧使用相同的索引进行处理
+   type_names_order = extract_atom_types(traj_file)
+
+   focused_traj = []
+   # 获取PdAu簇中心
+   cluster_center = get_pdau_cluster_center(data, type_names_order)
+   # 获取反应局部结构的原子索引
+   keep_indexes = get_reaction_local_atoms_list(data, type_names_order, c_index, o_index, cutoff)
+   # 以目标C和目标O连线中点为旋转向量的终点
+   vector_endpoint = (data.particles.positions[o_index] + data.particles.positions[c_index]) / 2
+   for frame in range(pipeline.source.num_frames):
+      data = pipeline.compute(frame=frame)
+      filtered_struct, new_indexes = create_filtered_structure(data, type_names_order, keep_indexes, old_indexes=[c_index, o_index])
+      # 将结构旋转，使得目标向量与-Y轴同向
+      rotated_struct = rotate_v1_around_p_to_v2(
+          atoms=filtered_struct,
+          rotation_center=cluster_center,
+          vector_endpoint=vector_endpoint,  # Use first atom position as vector endpoint
+          target_vector=target_vector
+      )
+      # 将旋转后的结构平移，使得簇中心位于新晶胞的中心
+      rotated_struct.set_cell(new_cell)
+      rotated_struct.set_pbc([True, True, True])
+      rotated_translated_struct = translate_structure_center(rotated_struct, np.array(new_cell)/2)
+      focused_traj.append(rotated_translated_struct)
+   return focused_traj, new_indexes</code></pre>
+</details>
+<div class="desc"><p>输入原始MD-neb结构文件，输出经过处理后的结构文件，将反应局部结构聚焦到小晶胞中，
+并使ovito观察视线方向（Y轴）经过反应区域和团簇中心
+输出聚焦后的结构文件（ASE ATOMS类）</p>
+<h2 id="_1">参数:</h2>
+<p>traj_file : str
+原始MD-neb结构文件路径
+c_index : int
+反应物CO的C原子的索引
+o_index : int
+反应物O原子的索引
+cutoff : float
+截止距离，单位为Å，默认为6.0
+target_vector : np.ndarray 或 list/tuple
+目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+new_cell : np.ndarray 或 list/tuple
+新的晶胞尺寸，形状为(3,)，如 [a, b, c]</p>
+<h2 id="_2">返回:</h2>
+<p>返回旋转并平移后的neb轨迹对象
+focused_traj : list of Atoms
+旋转并平移后的ASE Atoms对象列表
+new_indexes : list
+旋转并平移后的结构中，原始索引old_indexes对应的新的原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_traj_focusing_reaction_site_batches"><code class="name flex">
+<span>def <span class="ident">get_traj_focusing_reaction_site_batches</span></span>(<span>cutoff=6, target_vector=None, new_cell=[20, 20, 20])</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_traj_focusing_reaction_site_batches(cutoff = 6, target_vector=None, new_cell=[20, 20, 20]):
+    &#34;&#34;&#34;
+    批量处理当前目录下所有满足特定正则表达式的文件，调用get_traj_focusing_reaction_site函数进行处理，并将结果保存为新的文件。
+    
+    Args:
+
+        cutoff (float): 截止距离，单位为Å，默认为6.0
+    
+        target_vector (np.ndarray 或 list/tuple):  目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+    
+        new_cell (np.ndarray 或 list/tuple): 新的晶胞尺寸，形状为(3,)，如 [a, b, c]
+
+    &#34;&#34;&#34;
+    pattern = &#34;[0-9]+-[0-9]+_-?[0-9]\.[0-9]+_-?[0-9]\.[0-9]+_[0-9]+_[0-9]+\.xyz&#34;
+    target_files = find_matching_files(&#34;./&#34;, pattern)
+    print(&#34;Found files:&#34;, target_files)
+
+    target_vector = [0, -1, 0]
+    for file in target_files:
+        print(f&#34;Processing file: {file}&#34;)
+        _, _, c_idx, o_idx = parse_nebTraj_file_name(file)
+        name_without_ext, _ = os.path.splitext(file)
+        name_without_ext = &#34;_&#34;.join(name_without_ext.split(&#34;_&#34;)[:3])
+        focused_traj, new_indexes = get_traj_focusing_reaction_site(
+            file, c_idx, o_idx, cutoff = cutoff, target_vector = target_vector, new_cell=new_cell
+        )
+        output_file = f&#34;{name_without_ext}_{new_indexes[0]}_{new_indexes[1]}_focused.xyz&#34;
+        write(output_file, focused_traj)
+        print(f&#34;Saved focused trajectory to: {output_file}&#34;)</code></pre>
+</details>
+<div class="desc"><p>批量处理当前目录下所有满足特定正则表达式的文件，调用get_traj_focusing_reaction_site函数进行处理，并将结果保存为新的文件。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>截止距离，单位为Å，默认为6.0</dd>
+</dl>
+<p>target_vector (np.ndarray 或 list/tuple):
+目标向量，形状为(3,)，旋转后当前向量将与此向量同向</p>
+<p>new_cell (np.ndarray 或 list/tuple): 新的晶胞尺寸，形状为(3,)，如 [a, b, c]</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_xyz_prop_columns"><code class="name flex">
+<span>def <span class="ident">get_xyz_prop_columns</span></span>(<span>input_file: str, property: str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_xyz_prop_columns(input_file:str,property:str):
+    &#34;&#34;&#34;
+    获取.extxyz格式文件中某一个属性对应于原子数据的列号
+
+    Args:
+        input_file (str): 输入的.xyz文件
+        propertyc(str): 要查找的属性名称
+
+    Returns:
+        target_column_indexes (list): 目标属性对应的原子数据列号所在的列表
+
+    &#34;&#34;&#34;
+
+
+    with open(input_file, &#39;r&#39;, encoding=&#39;utf-8&#39;) as f:
+        # 跳过第一行
+        n_atoms = int(f.readline().strip())
+
+        second_string = f.readline().strip() 
+        properties_pattern = r&#39;Properties=[^&#34;]+&#39;
+        match = re.search(properties_pattern, second_string)
+        if match:
+            properties_str = match.group(0)
+        else:
+            print(&#34;无注释行！&#34;)
+            return None
+        
+        prop_parts = properties_str[11:].split(&#39;:&#39;)
+
+
+        # 解析properties字段
+        current_atomistic_data_column = 0
+        current_prop_part = 0
+
+        target_column_indexes = []
+
+        while current_prop_part &lt; len(prop_parts):
+            if current_prop_part + 3 &lt;= len(prop_parts):
+                prop_name = prop_parts[current_prop_part]  # 属性名
+                prop_type = prop_parts[current_prop_part+1]  # 属性类型
+                try:
+                    prop_size = int(prop_parts[current_prop_part+2])  # 属性维度
+                except ValueError:
+                    break
+                
+                # 如果是目标属性，返回当前列号
+                if prop_name == f&#34;{property}&#34;:
+                    for i in range(prop_size):
+                        target_column_indexes.append(current_atomistic_data_column + i)
+                    break
+                # 移动到下一个属性
+                current_prop_part += 3
+                current_atomistic_data_column += prop_size
+            else:
+                print(&#34;注释行不完整&#34;)
+                break
+    return target_column_indexes</code></pre>
+</details>
+<div class="desc"><p>获取.extxyz格式文件中某一个属性对应于原子数据的列号</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入的.xyz文件</dd>
+</dl>
+<p>propertyc(str): 要查找的属性名称</p>
+<h2 id="returns">Returns</h2>
+<p>target_column_indexes (list): 目标属性对应的原子数据列号所在的列表</p></div>
+</dd>
 <dt id="dcg_sci_tool.indexes2expression"><code class="name flex">
 <span>def <span class="ident">indexes2expression</span></span>(<span>indexes_list)</span>
 </code></dt>
@@ -1001,10 +2614,442 @@ rotated_translated_struct : Atoms
     exprssion_str = &#34;ParticleIndex == &#34; + str(indexes_list[0])
     for i in indexes_list[1:]:
         exprssion_str = exprssion_str + &#34;||&#34; + &#34;ParticleIndex == &#34; + str(i)
-    print(&#34;ExpressionSelectionModifier的表达式字符串:&#34;, exprssion_str)
-    return exprssion_str</code></pre>
+    print(&#34;ExpressionSelectionModifier的表达式字符串:&#34;)
+    print(exprssion_str)</code></pre>
 </details>
 <div class="desc"><p>将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。</p></div>
+</dd>
+<dt id="dcg_sci_tool.mark_special_points"><code class="name flex">
+<span>def <span class="ident">mark_special_points</span></span>(<span>point_list=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def mark_special_points(point_list=None):
+    &#34;&#34;&#34;
+    在散点图上添加特定点并标注
+
+    Args:
+        point_list (list): 包含点坐标和标签的字典列表，格式为 [{&#39;coords&#39;: (x, y), &#39;label&#39;: &#39;点标签&#39;}, ...]
+    &#34;&#34;&#34;
+    # 获取当前坐标轴范围
+    x_lim = plt.xlim()  # 保存当前x轴范围
+    y_lim = plt.ylim()  # 保存当前y轴范围
+
+
+    for point_dict in point_list:
+        x_val, y_val = point_dict[&#39;coords&#39;]
+        plt.scatter(x_val, y_val, c=&#39;red&#39;, s=30, marker=&#39;o&#39;, 
+                   edgecolor=&#39;k&#39;, linewidth=0.0)
+        # 在点旁边添加文字标注
+        plt.text(x_val, y_val, point_dict[&#39;label&#39;], fontsize=9, 
+                 ha=&#39;left&#39;, va=&#39;bottom&#39;)  # 文字在点的左下方
+
+    # 恢复坐标轴范围
+    plt.xlim(x_lim)
+    plt.ylim(y_lim)</code></pre>
+</details>
+<div class="desc"><p>在散点图上添加特定点并标注</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>point_list</code></strong> :&ensp;<code>list</code></dt>
+<dd>包含点坐标和标签的字典列表，格式为 [{'coords': (x, y), 'label': '点标签'}, &hellip;]</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.merge_xyz"><code class="name flex">
+<span>def <span class="ident">merge_xyz</span></span>(<span>file_list, output_file='merged.xyz')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def merge_xyz(file_list, output_file=&#34;merged.xyz&#34;):
+    &#34;&#34;&#34;合并多个xyz轨迹文件&#34;&#34;&#34;
+    
+    with open(output_file, &#39;w&#39;) as out_f:
+        for i, filename in enumerate(file_list):
+            with open(filename, &#39;r&#39;) as in_f:
+                content = in_f.read().rstrip()  # 移除末尾空白
+                
+                if i &gt; 0:  # 不是第一个文件，添加换行符
+                    out_f.write(&#39;\n&#39;)
+                
+                out_f.write(content)
+    
+    print(f&#34;成功合并 {len(file_list)} 个文件到 {output_file}&#34;)</code></pre>
+</details>
+<div class="desc"><p>合并多个xyz轨迹文件</p></div>
+</dd>
+<dt id="dcg_sci_tool.parse_nebTraj_file_name"><code class="name flex">
+<span>def <span class="ident">parse_nebTraj_file_name</span></span>(<span>file_name)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def parse_nebTraj_file_name(file_name):
+    &#34;&#34;&#34;
+    解析NEB轨迹文件名，提取Ea、dE、C_idx和O_idx信息
+
+    Args:
+
+        file_name (str): NEB轨迹文件名，格式为&#34;反应前CO2数-反应后CO2数_Ea_dE_Cidx_Oidx.xyz&#34;
+
+    Returns:
+
+        tuple: neb过程信息
+
+            Ea (float): 能垒
+
+            dE (float): 焓变
+
+            C_idx (int): 参与反应的CO的C原子索引
+
+            O_idx (int): 参与反应的氧原子索引
+
+    &#34;&#34;&#34;
+    name_without_ext, _ = os.path.splitext(file_name)
+    info = name_without_ext.split(&#34;_&#34;)
+    Ea = float(info[1])
+    dE = float(info[2])
+    C_idx= int(info[3])
+    O_idx= int(info[4])
+    return Ea, dE, C_idx, O_idx</code></pre>
+</details>
+<div class="desc"><p>解析NEB轨迹文件名，提取Ea、dE、C_idx和O_idx信息</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>file_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>NEB轨迹文件名，格式为"反应前CO2数-反应后CO2数_Ea_dE_Cidx_Oidx.xyz"</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>neb过程信息</p>
+<p>Ea (float): 能垒</p>
+<p>dE (float): 焓变</p>
+<p>C_idx (int): 参与反应的CO的C原子索引</p>
+<p>O_idx (int): 参与反应的氧原子索引</p>
+</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.plot_scatter_color"><code class="name flex">
+<span>def <span class="ident">plot_scatter_color</span></span>(<span>input_csv_file: str,<br>max_threshold=None,<br>min_threshold=None,<br>special_point_list=None,<br>x_label: str = 'PCA 1',<br>y_label: str = 'PCA 2',<br>colorbar_label: str = 'Energy (eV/atom)')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_scatter_color(input_csv_file: str, 
+                       max_threshold=None, 
+                       min_threshold=None,
+                       special_point_list=None, 
+                       x_label: str = &#39;PCA 1&#39;, 
+                       y_label: str = &#39;PCA 2&#39;, 
+                       colorbar_label: str = &#39;Energy (eV/atom)&#39;):
+    &#34;&#34;&#34;
+    绘制带颜色映射的散点图，可自定义阈值范围，高于或低于阈值的点将使用统一颜色。
+    采用viridis（翠绿色）颜色映射方案，适合色盲友好型视觉效果。
+    入参文件格式要求：CSV文件，前两列为点的X Y坐标，第三列为用于颜色映射的Z值。
+    
+    Args:
+        input_csv_file: 输入CSV文件路径，文件前两列是点的X Y坐标，第三列是用于颜色映射的Z值
+        max_threshold: 最大阈值，可选，默认为Z数据的最大值，如果不设，则没有色阶最大值截断
+        min_threshold: 最小阈值，可选，默认为Z数据的最小值，如果不设，则没有色阶最小值截断
+        special_point_list: 可选，包含特定点坐标和标签的字典列表，格式为 [{&#39;coords&#39;: (x, y), &#39;label&#39;: &#39;点标签&#39;}, ...]
+        x_label: X轴标签
+        y_label: Y轴标签
+        colorbar_label: Colorbar标签
+
+    示例用法：    
+
+    调用函数
+    plot_scatter_color(
+        input_csv_file=&#39;111.csv&#39;,
+        max_threshold=-2,
+        min_threshold=-6,
+        x_label=&#39;PCA 1&#39;,
+        y_label=&#39;PCA 2&#39;,
+        colorbar_label=&#39;Energy (eV/atom)&#39;
+    )
+    &#34;&#34;&#34;
+    
+    # 读取CSV文件
+    df = pd.read_csv(f&#39;{input_csv_file}&#39;)
+    # 提取数据
+    x = df.iloc[:, 0]
+    y = df.iloc[:, 1]
+    z = df.iloc[:, 2]
+
+    # 数据的最大值和最小值
+    data_max = z.max()
+    data_min = z.min()
+
+    if max_threshold is None:
+        max_threshold = data_max
+    if min_threshold is None:
+        min_threshold = data_min
+
+
+    # 创建自定义颜色映射（用于中间渐变区域）
+    # viridis（翠绿色）：色盲友好型颜色映射方案
+    custom_cmap = plt.cm.viridis 
+    # 获取顶部和底部的颜色
+    top_color = custom_cmap(1.0)  # 颜色节点的最后一个颜色（浅色）
+    bottom_color = custom_cmap(0.0)  # 颜色节点的第一个颜色（深色）
+
+
+    # 创建图形
+    plt.figure(figsize=(12, 8))
+
+    # 绘制底部统一颜色区域（Z &lt; min_threshold）
+    mask_z_lt_min_threshold = z &lt; min_threshold
+    if mask_z_lt_min_threshold.any():
+        plt.scatter(x[mask_z_lt_min_threshold], y[mask_z_lt_min_threshold], 
+                   c=bottom_color,  # 使用统一的底部颜色
+                   s=30, 
+                   edgecolor=&#39;k&#39;, 
+                   linewidth=0.0, 
+                   alpha=0.5,
+                   label=f&#39;Z &lt; {min_threshold}&#39;)
+
+    # 2绘制中间渐变区域（min_threshold ≤ Z ≤ max_threshold）
+    mask_in_range = (z &gt;= min_threshold) &amp; (z &lt;= max_threshold)
+    if mask_in_range.any():
+        # 为中间区域创建独立的归一化对象
+        norm_mid = mpl.colors.Normalize(vmin=min_threshold, vmax=max_threshold)
+        
+        scatter_mid = plt.scatter(x[mask_in_range], y[mask_in_range], 
+                                 c=z[mask_in_range], 
+                                 cmap=custom_cmap,  # 使用渐变颜色映射
+                                 norm=norm_mid,  # 只在阈值范围内归一化
+                                 s=30, 
+                                 edgecolor=&#39;k&#39;, 
+                                 linewidth=0.0, 
+                                 alpha=0.5,
+                                 label=f&#39;{min_threshold} ≤ Z ≤ {max_threshold}&#39;)
+
+    # 绘制顶部统一颜色区域（Z &gt; max_threshold）
+    mask_z_gt_max_threshold = z &gt; max_threshold
+    if mask_z_gt_max_threshold.any():
+        plt.scatter(x[mask_z_gt_max_threshold], y[mask_z_gt_max_threshold], 
+                   c=top_color,  # 使用统一的顶部颜色
+                   s=30, 
+                   edgecolor=&#39;k&#39;, 
+                   linewidth=0, 
+                   alpha=0.5,
+                   label=f&#39;Z &gt; {max_threshold}&#39;)
+
+    if special_point_list is not None:
+        mark_special_points(special_point_list)  # 调用添加特定点的函数
+
+ 
+    # 添加颜色条（只针对中间渐变区域）
+    if mask_in_range.any():
+
+        # 根据数据范围和设定的阈值范围，确定颜色条的extend参数
+        extend = &#39;neither&#39;
+        if max_threshold &lt; data_max and min_threshold &gt; data_min:
+            extend = &#39;both&#39;
+        if max_threshold &lt; data_max and min_threshold == data_min:
+            extend = &#39;max&#39;
+        if max_threshold == data_max and min_threshold &gt; data_min:
+            extend = &#39;min&#39;
+
+            
+
+        cbar = plt.colorbar(scatter_mid,orientation=&#39;vertical&#39;, 
+                       ticks=[min_threshold, max_threshold],
+                       extend=f&#39;{extend}&#39;)
+        cbar.set_label(f&#39;{colorbar_label}&#39;, fontsize=15)
+        
+        
+        # 设置颜色条刻度，包括最小值、中间值、最大值
+        ticks = [int(min_threshold), int((min_threshold + max_threshold) / 2), int(max_threshold)]
+        # 刻度值设置
+        cbar.set_ticks(ticks)
+        # 刻度标签字体大小设置
+        cbar.ax.tick_params(labelsize=12)
+   
+  
+
+    # 设置坐标轴
+    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=15)
+    plt.xlabel(f&#39;{x_label}&#39;, fontsize=16)
+    plt.ylabel(f&#39;{y_label}&#39;, fontsize=16)
+
+   
+    # # 添加图例
+    # plt.legend(fontsize=10, loc=&#39;best&#39;, framealpha=0.8)
+    
+    # 添加网格
+    # plt.grid(True, alpha=0.2, linestyle=&#39;--&#39;)
+
+    # 显示统计信息
+    print(&#34;=&#34;*50)
+    print(&#34;数据统计：&#34;)
+    print(f&#34;Z实际范围: [{z.min():.3f}, {z.max():.3f}]&#34;)
+    print(f&#34;设定阈值范围: [{min_threshold:.3f}, {max_threshold:.3f}]&#34;)
+    print(f&#34;底部区域(Z &lt; {min_threshold})点数: {mask_z_lt_min_threshold.sum()}&#34;)
+    print(f&#34;中间区域({min_threshold} ≤ Z ≤ {max_threshold})点数: {mask_in_range.sum()}&#34;)
+    print(f&#34;顶部区域(Z &gt; {max_threshold})点数: {mask_z_gt_max_threshold.sum()}&#34;)
+    print(&#34;=&#34;*50)
+
+    plt.tight_layout()
+    plt.show()</code></pre>
+</details>
+<div class="desc"><p>绘制带颜色映射的散点图，可自定义阈值范围，高于或低于阈值的点将使用统一颜色。
+采用viridis（翠绿色）颜色映射方案，适合色盲友好型视觉效果。
+入参文件格式要求：CSV文件，前两列为点的X Y坐标，第三列为用于颜色映射的Z值。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_csv_file</code></strong></dt>
+<dd>输入CSV文件路径，文件前两列是点的X Y坐标，第三列是用于颜色映射的Z值</dd>
+<dt><strong><code>max_threshold</code></strong></dt>
+<dd>最大阈值，可选，默认为Z数据的最大值，如果不设，则没有色阶最大值截断</dd>
+<dt><strong><code>min_threshold</code></strong></dt>
+<dd>最小阈值，可选，默认为Z数据的最小值，如果不设，则没有色阶最小值截断</dd>
+<dt><strong><code>special_point_list</code></strong></dt>
+<dd>可选，包含特定点坐标和标签的字典列表，格式为 [{'coords': (x, y), 'label': '点标签'}, &hellip;]</dd>
+<dt><strong><code>x_label</code></strong></dt>
+<dd>X轴标签</dd>
+<dt><strong><code>y_label</code></strong></dt>
+<dd>Y轴标签</dd>
+<dt><strong><code>colorbar_label</code></strong></dt>
+<dd>Colorbar标签</dd>
+</dl>
+<p>示例用法：
+</p>
+<p>调用函数
+plot_scatter_color(
+input_csv_file='111.csv',
+max_threshold=-2,
+min_threshold=-6,
+x_label='PCA 1',
+y_label='PCA 2',
+colorbar_label='Energy (eV/atom)'
+)</p></div>
+</dd>
+<dt id="dcg_sci_tool.pre_del_gases"><code class="name flex">
+<span>def <span class="ident">pre_del_gases</span></span>(<span>input_file: str, old_indexes_to_transfer: list)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pre_del_gases(input_file: str, old_indexes_to_transfer: list):
+    &#34;&#34;&#34;
+    将轨迹文件第一帧结构中，PdAu团簇上游离的气态分子删去，输出新的Atoms对象以及新的原子索引
+
+    Args:
+        input_file (str): 要处理的轨迹文件地址
+        old_indexes_to_transfer (list): 要获得新索引列表的旧索引的列表
+
+    Returns:
+        tuple: 处理后的结果
+
+            filtered_atoms (Atoms): 处理后的Atoms对象
+        
+            tranfered_indexes (list): 转化后的原子索引列表
+
+    &#34;&#34;&#34;
+
+    
+    pipeline = import_file(input_file)
+    type_names_order = extract_atom_types(input_file)
+    frame = 0
+    data = pipeline.compute(frame)
+
+    # 获取要删除的原子的索引列表
+    list_for_deletion = detect_gas_molecules_for_deletion(data, type_names_order)
+
+    # 获取要保留的原子的索引列表
+    keep_indexes=[]
+    for i in range(data.particles.count):
+        if i not in list_for_deletion:
+            keep_indexes.append(i)
+
+
+    # 处理并输出新结构
+    filtered_atoms, tranfered_indexes = create_filtered_structure(data, type_names_order, keep_indexes, old_indexes_to_transfer)
+
+    return filtered_atoms, tranfered_indexes</code></pre>
+</details>
+<div class="desc"><p>将轨迹文件第一帧结构中，PdAu团簇上游离的气态分子删去，输出新的Atoms对象以及新的原子索引</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>要处理的轨迹文件地址</dd>
+<dt><strong><code>old_indexes_to_transfer</code></strong> :&ensp;<code>list</code></dt>
+<dd>要获得新索引列表的旧索引的列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>处理后的结果</p>
+<p>filtered_atoms (Atoms): 处理后的Atoms对象</p>
+<p>tranfered_indexes (list): 转化后的原子索引列表</p>
+</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.resultData2extxyz"><code class="name flex">
+<span>def <span class="ident">resultData2extxyz</span></span>(<span>input_file: str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def resultData2extxyz(input_file: str):
+    &#34;&#34;&#34;
+    
+    将lammps的.data格式的文件转化为.extxyz格式的文件。
+
+    注意：
+    
+    只能处理含有元素信息的result.data文件， 无法处理不含元素信息的ini.data。
+
+    元素原子量无须严格和代码内置的 原子量-元素符号 列表中对应原子量匹配，脚本会寻找最接近原子量的元素
+
+    Args:
+        input_file (str): 要处理的lammps的data文件的地址
+    &#34;&#34;&#34;
+    
+    # 输出文件名称
+    output_file = &#34;structure.extxyz&#34;
+    
+    # 读取数据
+    atoms, elements, masses, atom_types, x_coords, y_coords, z_coords, xlo, xhi, ylo, yhi, zlo, zhi = read_lammps_data(input_file)
+    
+    print(f&#34;读取到 {len(atoms)} 个原子&#34;)
+    print(f&#34;元素类型: {sorted(set(elements))}&#34;)
+    if masses:
+        print(f&#34;质量范围: {min(masses):.3f} - {max(masses):.3f}&#34;)
+    print(f&#34;晶胞参数: x={xhi-xlo:.3f} Å, y={yhi-ylo:.3f} Å, z={zhi-zlo:.3f} Å&#34;)
+    
+    # 创建.extxyz文件
+    create_extxyz(atoms, elements, masses, atom_types, x_coords, y_coords, z_coords, 
+                  xlo, xhi, ylo, yhi, zlo, zhi, output_file)
+    print(f&#34;.extxyz文件已生成: {output_file}&#34;)</code></pre>
+</details>
+<div class="desc"><p>将lammps的.data格式的文件转化为.extxyz格式的文件。</p>
+<p>注意：</p>
+<p>只能处理含有元素信息的result.data文件， 无法处理不含元素信息的ini.data。</p>
+<p>元素原子量无须严格和代码内置的 原子量-元素符号 列表中对应原子量匹配，脚本会寻找最接近原子量的元素</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>要处理的lammps的data文件的地址</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.rotate_v1_around_p_to_v2"><code class="name flex">
 <span>def <span class="ident">rotate_v1_around_p_to_v2</span></span>(<span>atoms, rotation_center, vector_endpoint, target_vector)</span>
@@ -1016,24 +3061,26 @@ rotated_translated_struct : Atoms
 </summary>
 <pre><code class="python">def rotate_v1_around_p_to_v2(atoms, rotation_center, vector_endpoint, target_vector):
     &#34;&#34;&#34;
-    旋转结构中的所有原子，使从旋转中心到指定终点的向量与目标向量同向
+    旋转结构中的所有原子，使从旋转中心到指定终点的向量与目标向量同向，这个函数会改变入参atoms的状态
     
-    参数:
-    ----------
-    atoms : Atoms
-        包含原子结构的ASE Atoms对象
-    rotation_center : np.ndarray 或 list/tuple
-        旋转中心坐标，形状为(3,)，如 [x, y, z]
-    vector_endpoint : np.ndarray 或 list/tuple
-        要旋转的向量的终点坐标，形状为(3,)
-    target_vector : np.ndarray 或 list/tuple
-        目标向量，形状为(3,)，旋转后当前向量将与此向量同向
+    Args:
+
+        atoms (Atoms): 包含原子结构的ASE Atoms对象
+
+        rotation_center (np.ndarray 或 list/tuple): 
+            旋转中心坐标，形状为(3,)，如 [x, y, z]
+
+        vector_endpoint (np.ndarray 或 list/tuple): 
+            要旋转的向量的终点坐标，形状为(3,)
+
+        target_vector (np.ndarray 或 list/tuple): 
+            目标向量，形状为(3,)，旋转后当前向量将与此向量同向
 
         
-    返回:
-    -------
-    atoms : Atoms
-        旋转后的原子结构
+    Returns:
+
+        atoms : Atoms
+            旋转后的原子结构
     &#34;&#34;&#34;
     
     
@@ -1129,19 +3176,99 @@ rotated_translated_struct : Atoms
     
     return atoms</code></pre>
 </details>
-<div class="desc"><p>旋转结构中的所有原子，使从旋转中心到指定终点的向量与目标向量同向</p>
-<h2 id="_1">参数:</h2>
-<p>atoms : Atoms
-包含原子结构的ASE Atoms对象
-rotation_center : np.ndarray 或 list/tuple
-旋转中心坐标，形状为(3,)，如 [x, y, z]
-vector_endpoint : np.ndarray 或 list/tuple
-要旋转的向量的终点坐标，形状为(3,)
-target_vector : np.ndarray 或 list/tuple
+<div class="desc"><p>旋转结构中的所有原子，使从旋转中心到指定终点的向量与目标向量同向，这个函数会改变入参atoms的状态</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>atoms</code></strong> :&ensp;<code>Atoms</code></dt>
+<dd>包含原子结构的ASE Atoms对象</dd>
+</dl>
+<p>rotation_center (np.ndarray 或 list/tuple):
+旋转中心坐标，形状为(3,)，如 [x, y, z]</p>
+<p>vector_endpoint (np.ndarray 或 list/tuple):
+要旋转的向量的终点坐标，形状为(3,)</p>
+<p>target_vector (np.ndarray 或 list/tuple):
 目标向量，形状为(3,)，旋转后当前向量将与此向量同向</p>
-<h2 id="_2">返回:</h2>
-<p>atoms : Atoms
-旋转后的原子结构</p></div>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>atoms </code></dt>
+<dd>Atoms
+旋转后的原子结构</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.split_xyz_by_elements"><code class="name flex">
+<span>def <span class="ident">split_xyz_by_elements</span></span>(<span>filename: str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def split_xyz_by_elements(filename:str):
+    &#34;&#34;&#34;
+    按元素组合分割轨迹文件
+    
+    Args:
+        filename (str): 输入的.xyz轨迹文件地址
+    
+    &#34;&#34;&#34;
+    with open(filename) as f:
+        lines = f.readlines()
+    
+    frames_by_comb = defaultdict(list)  # 按元素组合分组
+    i, frame_idx = 0, 0
+    
+    while i &lt; len(lines):
+        if not lines[i].strip():  # 跳过空行
+            i += 1
+            continue
+        
+        # 读取原子数
+        try:
+            n_atoms = int(lines[i].strip())
+        except:
+            i += 1
+            continue
+        
+        # 获取当前帧的所有元素种类
+        elements = set()
+        for j in range(2, 2 + n_atoms):
+            if i + j &lt; len(lines):
+                parts = lines[i + j].strip().split()
+                if parts:
+                    elements.add(parts[0])
+        
+        # 排序并转换为字符串作为组合标识
+        comb_key = tuple(sorted(elements))
+        
+        # 保存当前帧
+        frame_content = &#34;&#34;.join(lines[i:i+2+n_atoms])
+        frames_by_comb[comb_key].append(frame_content)
+        
+        i += 2 + n_atoms
+        frame_idx += 1
+    
+    # 输出结果
+    base = filename.rsplit(&#39;.&#39;, 1)[0]
+    print(f&#34;总帧数: {frame_idx}&#34;)
+    print(f&#34;元素组合数: {len(frames_by_comb)}&#34;)
+    
+    for comb, frames in frames_by_comb.items():
+        # 生成文件名
+        comb_str = &#34;_&#34;.join(comb) or &#34;empty&#34;
+        outfile = f&#34;{base}_{comb_str}_{len(frames)}.xyz&#34;
+        
+        # 写入文件
+        with open(outfile, &#39;w&#39;) as f:
+            f.write(&#34;&#34;.join(frames))
+        
+        print(f&#34;  {comb_str}: {len(frames)}帧 -&gt; {outfile}&#34;)</code></pre>
+</details>
+<div class="desc"><p>按元素组合分割轨迹文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入的.xyz轨迹文件地址</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.sum_to_n"><code class="name flex">
 <span>def <span class="ident">sum_to_n</span></span>(<span>n: int) ‑> int</span>
@@ -1196,6 +3323,60 @@ target_vector : np.ndarray 或 list/tuple
 &gt;&gt;&gt; sum_to_n(100)
 5050
 </code></pre></div>
+</dd>
+<dt id="dcg_sci_tool.traj2iniData"><code class="name flex">
+<span>def <span class="ident">traj2iniData</span></span>(<span>traj_file: str, specorder=['C', 'O', 'Pd', 'Au'], start_frame=0, end_frame=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def traj2iniData(traj_file: str, specorder=[&#39;C&#39;,&#39;O&#39;,&#39;Pd&#39;,&#39;Au&#39;], start_frame=0, end_frame=None):
+    &#34;&#34;&#34;
+    将轨迹文件转换为LAMMPS ini data文件：0.data, 1.data, 2.data, ...
+    
+    Args:
+        traj_file (str): 轨迹文件路径
+        specorder (list): 元素顺序列表，元素会按在表格中的顺序分别编号为1，2，3...
+        start_frame (int): 起始帧索引 (默认0)
+        end_frame (int): 结束帧索引 (默认None表示最后一帧)，-N表示倒数第N帧
+    &#34;&#34;&#34;
+    # 读取所有结构
+    structs = read(traj_file, &#39;:&#39;)
+    
+    # 获取总帧数
+    total_frames = len(structs)
+    
+    # 设置合适的end_frame默认值
+    if end_frame is None:
+        end_frame = total_frames  # 最后一帧的索引+1
+    elif end_frame &lt; 0:
+        # 支持负数索引，如-1表示最后一帧
+        end_frame = total_frames + end_frame + 1
+    
+    # 确保索引在有效范围内
+    start_frame = max(0, min(start_frame, total_frames-1))
+    end_frame = max(start_frame+1, min(end_frame, total_frames))
+    
+    print(f&#34;处理帧: {start_frame} 到 {end_frame-1} (共{total_frames}帧)&#34;)
+    
+    # 处理每一帧
+    for i in range(start_frame, end_frame):
+        write_lammps_data(f&#39;{i}.data&#39;, structs[i], specorder=specorder)</code></pre>
+</details>
+<div class="desc"><p>将轨迹文件转换为LAMMPS ini data文件：0.data, 1.data, 2.data, &hellip;</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>traj_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>轨迹文件路径</dd>
+<dt><strong><code>specorder</code></strong> :&ensp;<code>list</code></dt>
+<dd>元素顺序列表，元素会按在表格中的顺序分别编号为1，2，3&hellip;</dd>
+<dt><strong><code>start_frame</code></strong> :&ensp;<code>int</code></dt>
+<dd>起始帧索引 (默认0)</dd>
+<dt><strong><code>end_frame</code></strong> :&ensp;<code>int</code></dt>
+<dd>结束帧索引 (默认None表示最后一帧)，-N表示倒数第N帧</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.translate_structure_center"><code class="name flex">
 <span>def <span class="ident">translate_structure_center</span></span>(<span>atoms, target_center)</span>
@@ -1278,25 +3459,54 @@ target_center : np.ndarray 或 list/tuple
 <ul id="index">
 <li><h3><a href="#header-submodules">Sub-modules</a></h3>
 <ul>
+<li><code><a title="dcg_sci_tool.applications" href="applications/index.html">dcg_sci_tool.applications</a></code></li>
 <li><code><a title="dcg_sci_tool.cli" href="cli.html">dcg_sci_tool.cli</a></code></li>
+<li><code><a title="dcg_sci_tool.plot" href="plot/index.html">dcg_sci_tool.plot</a></code></li>
+<li><code><a title="dcg_sci_tool.reaction" href="reaction/index.html">dcg_sci_tool.reaction</a></code></li>
+<li><code><a title="dcg_sci_tool.structures_analysis" href="structures_analysis/index.html">dcg_sci_tool.structures_analysis</a></code></li>
+<li><code><a title="dcg_sci_tool.structures_modifying" href="structures_modifying/index.html">dcg_sci_tool.structures_modifying</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
+<li><code><a title="dcg_sci_tool.add_config_to_xyz" href="#dcg_sci_tool.add_config_to_xyz">add_config_to_xyz</a></code></li>
+<li><code><a title="dcg_sci_tool.construct_CO2_formation_FS" href="#dcg_sci_tool.construct_CO2_formation_FS">construct_CO2_formation_FS</a></code></li>
 <li><code><a title="dcg_sci_tool.create_filtered_structure" href="#dcg_sci_tool.create_filtered_structure">create_filtered_structure</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_CO_CO2_molecules" href="#dcg_sci_tool.detect_CO_CO2_molecules">detect_CO_CO2_molecules</a></code></li>
-<li><code><a title="dcg_sci_tool.detect_CO_coordinating_to_Pd" href="#dcg_sci_tool.detect_CO_coordinating_to_Pd">detect_CO_coordinating_to_Pd</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_CO_coordinating_to_PdAu" href="#dcg_sci_tool.detect_CO_coordinating_to_PdAu">detect_CO_coordinating_to_PdAu</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_O2_molecules" href="#dcg_sci_tool.detect_O2_molecules">detect_O2_molecules</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_gas_molecules_for_deletion" href="#dcg_sci_tool.detect_gas_molecules_for_deletion">detect_gas_molecules_for_deletion</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_single_adsorbed_O" href="#dcg_sci_tool.detect_single_adsorbed_O">detect_single_adsorbed_O</a></code></li>
 <li><code><a title="dcg_sci_tool.extract_atom_types" href="#dcg_sci_tool.extract_atom_types">extract_atom_types</a></code></li>
+<li><code><a title="dcg_sci_tool.find_cluster_surface_hollow_sites" href="#dcg_sci_tool.find_cluster_surface_hollow_sites">find_cluster_surface_hollow_sites</a></code></li>
+<li><code><a title="dcg_sci_tool.find_elements_exclusively_frames" href="#dcg_sci_tool.find_elements_exclusively_frames">find_elements_exclusively_frames</a></code></li>
+<li><code><a title="dcg_sci_tool.find_matching_files" href="#dcg_sci_tool.find_matching_files">find_matching_files</a></code></li>
+<li><code><a title="dcg_sci_tool.find_nearest_hollow_site" href="#dcg_sci_tool.find_nearest_hollow_site">find_nearest_hollow_site</a></code></li>
+<li><code><a title="dcg_sci_tool.get_OC_bonded_metal_atoms" href="#dcg_sci_tool.get_OC_bonded_metal_atoms">get_OC_bonded_metal_atoms</a></code></li>
 <li><code><a title="dcg_sci_tool.get_atoms_near_point" href="#dcg_sci_tool.get_atoms_near_point">get_atoms_near_point</a></code></li>
+<li><code><a title="dcg_sci_tool.get_hollowSite_Au_Disperation" href="#dcg_sci_tool.get_hollowSite_Au_Disperation">get_hollowSite_Au_Disperation</a></code></li>
+<li><code><a title="dcg_sci_tool.get_hollowSite_outer_neighbors_with_subsurface" href="#dcg_sci_tool.get_hollowSite_outer_neighbors_with_subsurface">get_hollowSite_outer_neighbors_with_subsurface</a></code></li>
+<li><code><a title="dcg_sci_tool.get_hollowSite_outer_surface_neighbors" href="#dcg_sci_tool.get_hollowSite_outer_surface_neighbors">get_hollowSite_outer_surface_neighbors</a></code></li>
+<li><code><a title="dcg_sci_tool.get_local_minima_sides_of_peak" href="#dcg_sci_tool.get_local_minima_sides_of_peak">get_local_minima_sides_of_peak</a></code></li>
 <li><code><a title="dcg_sci_tool.get_pdau_cluster_center" href="#dcg_sci_tool.get_pdau_cluster_center">get_pdau_cluster_center</a></code></li>
+<li><code><a title="dcg_sci_tool.get_pdau_surface_atoms" href="#dcg_sci_tool.get_pdau_surface_atoms">get_pdau_surface_atoms</a></code></li>
+<li><code><a title="dcg_sci_tool.get_reactants_ad_config" href="#dcg_sci_tool.get_reactants_ad_config">get_reactants_ad_config</a></code></li>
 <li><code><a title="dcg_sci_tool.get_reaction_local_atoms_list" href="#dcg_sci_tool.get_reaction_local_atoms_list">get_reaction_local_atoms_list</a></code></li>
 <li><code><a title="dcg_sci_tool.get_struct_focusing_reaction_site" href="#dcg_sci_tool.get_struct_focusing_reaction_site">get_struct_focusing_reaction_site</a></code></li>
+<li><code><a title="dcg_sci_tool.get_traj_focusing_reaction_site" href="#dcg_sci_tool.get_traj_focusing_reaction_site">get_traj_focusing_reaction_site</a></code></li>
+<li><code><a title="dcg_sci_tool.get_traj_focusing_reaction_site_batches" href="#dcg_sci_tool.get_traj_focusing_reaction_site_batches">get_traj_focusing_reaction_site_batches</a></code></li>
+<li><code><a title="dcg_sci_tool.get_xyz_prop_columns" href="#dcg_sci_tool.get_xyz_prop_columns">get_xyz_prop_columns</a></code></li>
 <li><code><a title="dcg_sci_tool.indexes2expression" href="#dcg_sci_tool.indexes2expression">indexes2expression</a></code></li>
+<li><code><a title="dcg_sci_tool.mark_special_points" href="#dcg_sci_tool.mark_special_points">mark_special_points</a></code></li>
+<li><code><a title="dcg_sci_tool.merge_xyz" href="#dcg_sci_tool.merge_xyz">merge_xyz</a></code></li>
+<li><code><a title="dcg_sci_tool.parse_nebTraj_file_name" href="#dcg_sci_tool.parse_nebTraj_file_name">parse_nebTraj_file_name</a></code></li>
+<li><code><a title="dcg_sci_tool.plot_scatter_color" href="#dcg_sci_tool.plot_scatter_color">plot_scatter_color</a></code></li>
+<li><code><a title="dcg_sci_tool.pre_del_gases" href="#dcg_sci_tool.pre_del_gases">pre_del_gases</a></code></li>
+<li><code><a title="dcg_sci_tool.resultData2extxyz" href="#dcg_sci_tool.resultData2extxyz">resultData2extxyz</a></code></li>
 <li><code><a title="dcg_sci_tool.rotate_v1_around_p_to_v2" href="#dcg_sci_tool.rotate_v1_around_p_to_v2">rotate_v1_around_p_to_v2</a></code></li>
+<li><code><a title="dcg_sci_tool.split_xyz_by_elements" href="#dcg_sci_tool.split_xyz_by_elements">split_xyz_by_elements</a></code></li>
 <li><code><a title="dcg_sci_tool.sum_to_n" href="#dcg_sci_tool.sum_to_n">sum_to_n</a></code></li>
+<li><code><a title="dcg_sci_tool.traj2iniData" href="#dcg_sci_tool.traj2iniData">traj2iniData</a></code></li>
 <li><code><a title="dcg_sci_tool.translate_structure_center" href="#dcg_sci_tool.translate_structure_center">translate_structure_center</a></code></li>
 </ul>
 </li>
