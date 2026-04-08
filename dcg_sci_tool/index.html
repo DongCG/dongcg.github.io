@@ -52,6 +52,10 @@ This package is designed to be easy to use and integrate into various scientific
 <dd>
 <div class="desc"></div>
 </dd>
+<dt><code class="name"><a title="dcg_sci_tool.csv" href="csv/index.html">dcg_sci_tool.csv</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 <dt><code class="name"><a title="dcg_sci_tool.plot" href="plot/index.html">dcg_sci_tool.plot</a></code></dt>
 <dd>
 <div class="desc"></div>
@@ -156,33 +160,626 @@ This package is designed to be easy to use and integrate into various scientific
 <dd>要添加的Config_type值</dd>
 </dl></div>
 </dd>
-<dt id="dcg_sci_tool.construct_CO2_formation_FS"><code class="name flex">
-<span>def <span class="ident">construct_CO2_formation_FS</span></span>(<span>input_file, atom_indices, output_file='adjusted_structure.xyz')</span>
+<dt id="dcg_sci_tool.append_key_value_pairs_to_extxyz"><code class="name flex">
+<span>def <span class="ident">append_key_value_pairs_to_extxyz</span></span>(<span>input_file: str, key_value_pairs: List[Tuple[str, str]], output_file: str) ‑> str</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def construct_CO2_formation_FS(input_file, atom_indices, output_file=&#34;adjusted_structure.xyz&#34;):
+<pre><code class="python">def append_key_value_pairs_to_extxyz(
+    input_file: str, 
+    key_value_pairs: List[Tuple[str, str]],
+    output_file: str
+) -&gt; str:
     &#34;&#34;&#34;
-    调整结构，使反应物的吸附态CO和吸附态O相向移动，生成吸附态CO2；
+    在.extxyz格式轨迹文件的每一帧注释行追加键值对
+    
+    Args:
+
+        input_file (str):
+            输入的.extxyz格式轨迹文件路径
+        key_value_pairs (List[Tuple[str, str]]):
+            要追加的键值对列表，每个元组格式为(键, 值)
+        output_file (str, optional):
+            输出文件路径，如果为None则自动生成
+        
+    Returns:
+        output_file (str):
+            输出文件路径
+    &#34;&#34;&#34;
+    
+    # 如果没有指定输出文件，自动生成
+    if output_file is None:
+        base, ext = os.path.splitext(input_file)
+        output_file = f&#34;{base}_modified{ext}&#34;
+    
+    with open(input_file, &#39;r&#39;) as infile, open(output_file, &#39;w&#39;) as outfile:
+        while True:
+            # 读取第一行：原子数量
+            atoms_line = infile.readline()
+            if not atoms_line:  # 文件结束
+                break
+            
+            # 写入原子数量行
+            outfile.write(atoms_line)
+            
+            # 读取第二行：注释行（包含键值对）
+            comment_line = infile.readline()
+            if not comment_line:
+                break
+            
+            # 移除行尾换行符
+            comment_line = comment_line.rstrip(&#39;\n&#39;)
+            
+            # 在注释行末尾追加键值对
+            if comment_line.strip():  # 如果注释行非空
+                # 如果注释行不是以空格结尾，添加一个空格
+                if comment_line and not comment_line.endswith(&#39; &#39;):
+                    comment_line += &#39; &#39;
+            else:
+                # 如果注释行为空，从第一个键值对开始
+                comment_line = &#39;&#39;
+            
+            # 添加键值对
+            for key, value in key_value_pairs:
+                comment_line += f&#39;{key}={value} &#39;
+            
+            # 移除最后一个多余的空格并添加换行符
+            comment_line = comment_line.rstrip() + &#39;\n&#39;
+            
+            # 写入修改后的注释行
+            outfile.write(comment_line)
+            
+            # 获取原子数量
+            try:
+                num_atoms = int(atoms_line.strip())
+            except ValueError:
+                raise ValueError(f&#34;无法解析原子数量: {atoms_line.strip()}&#34;)
+            
+            # 读取并写入原子坐标行
+            for _ in range(num_atoms):
+                atom_line = infile.readline()
+                if not atom_line:
+                    raise ValueError(&#34;文件格式错误：原子坐标行数量不足&#34;)
+                outfile.write(atom_line)
+    
+    print(f&#34;处理完成！输出文件: {output_file}&#34;)
+    return output_file</code></pre>
+</details>
+<div class="desc"><p>在.extxyz格式轨迹文件的每一帧注释行追加键值对</p>
+<h2 id="args">Args</h2>
+<p>input_file (str):
+输入的.extxyz格式轨迹文件路径
+key_value_pairs (List[Tuple[str, str]]):
+要追加的键值对列表，每个元组格式为(键, 值)
+output_file (str, optional):
+输出文件路径，如果为None则自动生成</p>
+<h2 id="returns">Returns</h2>
+<p>output_file (str):
+输出文件路径</p></div>
+</dd>
+<dt id="dcg_sci_tool.atoms2lmps_resultData"><code class="name flex">
+<span>def <span class="ident">atoms2lmps_resultData</span></span>(<span>atoms: ase.atoms.Atoms, output_file: str = 'FS.data')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def atoms2lmps_resultData(atoms: Atoms, output_file: str = &#34;FS.data&#34;):
+    &#34;&#34;&#34;
+    将ASE Atoms对象转化为lammps跑neb时的FS.data格式的文件
+    
+    格式：
+    第一行：原子数
+    后续行：原子序号(从1开始) X Y Z坐标
+
+    Args:
+
+        atoms (Atoms): 要处理的Atoms对象
+
+        output_file (str): 输出的.data文件名，默认值为FS.data
+
+    &#34;&#34;&#34;
+    print(f&#34;开始将输入atoms对象转化为lammps跑neb时的FS.data文件...&#34;)
+    with open(output_file, &#39;w&#39;) as f:
+        # 第一行：原子数
+        f.write(f&#34;{len(atoms)}\n&#34;)
+        
+        # 原子信息
+        for i, (x, y, z) in enumerate(atoms.positions, 1):
+            f.write(f&#34;{i} {x:.6f} {y:.6f} {z:.6f}\n&#34;)
+    print(&#34;转化结束&#34;)</code></pre>
+</details>
+<div class="desc"><p>将ASE Atoms对象转化为lammps跑neb时的FS.data格式的文件</p>
+<p>格式：
+第一行：原子数
+后续行：原子序号(从1开始) X Y Z坐标</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>atoms</code></strong> :&ensp;<code>Atoms</code></dt>
+<dd>要处理的Atoms对象</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输出的.data文件名，默认值为FS.data</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.auto_neb_refine"><code class="name flex">
+<span>def <span class="ident">auto_neb_refine</span></span>(<span>lammps_in_file: str, left_idx, right_idx, max_round_num=3)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def auto_neb_refine(lammps_in_file: str, left_idx, right_idx, max_round_num = 3):
+    &#34;&#34;&#34;
+    自动NEB优化：如果初次neb优化结果中出现中间态，则自动以中间态为初末态，重新优化NEB
+    直至neb优化出的能量-坐标图为单峰，最多执行max_round_num轮
+
+    Args:
+
+        lammps_in_file (str): LAMMPS输入文件地址
+
+        left_idx (int): 要截取的NEB最高峰左侧端点序号
+
+        right_idx (int): 要截取的NEB最高峰右侧端点序号
+
+        max_round_num (int): 循环迭代的最大轮数，默认值为3
+
+    Returns:
+
+        tuple: 最终优化结果的信息
+
+        Ea (float): 最终优化结果的能垒
+
+        dH (float): 最终优化结果的焓变
+
+        dir (str):  最终优化结果所在的地址
+
+        isConverged (bool): 最终优化结果是否力收敛（F &lt; 0.05）
+
+    &#34;&#34;&#34;
+    
+    # 初始化
+    original_cwd = os.getcwd()
+    last_round_cwd = os.getcwd()
+    
+    for round_num in range(1, max_round_num + 1):
+          
+        # 1. 创建并进入本轮工作目录
+        target_dir = os.path.join(original_cwd, f&#34;mid{round_num}_{left_idx}-{right_idx}&#34;)
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # 2. 移动中间体结构文件
+        for suffix in [&#34;IS&#34;, &#34;FS&#34;]:
+            src_file = os.path.join(last_round_cwd, f&#34;mid_{suffix}.xyz&#34;)
+            if os.path.exists(src_file):
+                shutil.move(src_file, target_dir)
+            else:
+                print(f&#34;警告: 未找到 {src_file}&#34;)
+        
+        # 3. 复制配置文件
+        config_files = [lammps_in_file, &#39;nep.txt&#39;]
+        for file in config_files:
+            for src in glob.glob(file):
+                if os.path.isfile(src):
+                    shutil.copy(src, target_dir)
+        
+        # 4. 切换目录并执行计算
+        os.chdir(target_dir)
+        
+        # 5. 生成LAMMPS输入数据
+        traj2iniData(
+            traj_file=&#34;mid_IS.xyz&#34;,
+            specorder=[&#39;C&#39;, &#39;O&#39;, &#39;Pd&#39;, &#39;Au&#39;],
+            start_frame=0,
+            end_frame=0
+        )
+        os.rename(&#39;0.data&#39;, &#39;IS.data&#39;)
+        
+        FS_atoms = read(&#34;mid_FS.xyz&#34;, index=0)
+        atoms2lmps_resultData(atoms=FS_atoms, output_file=&#34;FS.data&#34;)
+        
+        # 6. 执行LAMMPS计算
+        print(f&#34;第{round_num}轮: 开始LAMMPS NEB计算&#34;)
+        mpirun_lammps(input_file=lammps_in_file, partition=&#34;40x1&#34;)
+        
+        # 7. 后处理
+        neb_get_traj()
+        Ea, dH, isConverged = plot_neb_graph(src_file=&#39;neb_mep.dat&#39;, output_file=&#34;neb_graph.png&#34;)
+        last_round_cwd = os.getcwd()
+
+        # 8. 检查是否继续
+        if round_num == max_round_num:
+            print(f&#34;@@@达到最大轮数 {max_round_num}，停止@@@&#34;)
+            return Ea, dH, last_round_cwd, isConverged
+        
+        # 9. 分析结果，准备下一轮
+        found_local_minima, left_idx, right_idx = get_local_minima_sides_of_peak(
+            mep_data_file=&#34;neb_mep.dat&#34;, 
+            neb_traj_file=&#34;result.xyz&#34;
+        )
+        
+        if not found_local_minima:
+            return Ea, dH, last_round_cwd, isConverged
+
+        # 返回原始目录
+        os.chdir(original_cwd)
+    
+    print(&#34;NEB细化完成&#34;)
+    os.chdir(original_cwd)</code></pre>
+</details>
+<div class="desc"><p>自动NEB优化：如果初次neb优化结果中出现中间态，则自动以中间态为初末态，重新优化NEB
+直至neb优化出的能量-坐标图为单峰，最多执行max_round_num轮</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>lammps_in_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>LAMMPS输入文件地址</dd>
+<dt><strong><code>left_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>要截取的NEB最高峰左侧端点序号</dd>
+<dt><strong><code>right_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>要截取的NEB最高峰右侧端点序号</dd>
+<dt><strong><code>max_round_num</code></strong> :&ensp;<code>int</code></dt>
+<dd>循环迭代的最大轮数，默认值为3</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>最终优化结果的信息</dd>
+</dl>
+<p>Ea (float): 最终优化结果的能垒</p>
+<p>dH (float): 最终优化结果的焓变</p>
+<p>dir (str):
+最终优化结果所在的地址</p>
+<p>isConverged (bool): 最终优化结果是否力收敛（F &lt; 0.05）</p></div>
+</dd>
+<dt id="dcg_sci_tool.averaging_count_matches"><code class="name flex">
+<span>def <span class="ident">averaging_count_matches</span></span>(<span>list_src: List[Tuple[Any, ...]],<br>list_target: List[Tuple[Any, ...]],<br>index_a: int = 3,<br>index_b: int = 4) ‑> List[Tuple[Any, ...]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def averaging_count_matches(
+    list_src: List[Tuple[Any, ...]], 
+    list_target: List[Tuple[Any, ...]],
+    index_a: int = 3,
+    index_b: int = 4
+) -&gt; List[Tuple[Any, ...]]:
+    &#34;&#34;&#34;
+    统计list_src中元组的指定元素在list_target中的出现次数，并计算其他元素的平均值
+    
+    Args:
+        list_src (List[Tuple[Any, ...]]): 源元组列表
+        list_target (List[Tuple[Any, ...]]): 目标元组列表
+        index_a (int): 要统计第一个元素的索引
+        index_b (int): 要统计第二个元素的索引
+    
+    Returns:
+        List[Tuple[Any, ...]]: 更新后的list_target，每个元组末尾添加了计数和平均值
+    &#34;&#34;&#34;
+    if not list_src or not list_target:
+        return [(item + (0, 0)) for item in list_target] if list_target else []
+    
+    # 创建字典用于快速查找
+    lookup_dict = {}
+    for idx, tup in enumerate(list_target):
+        if len(tup) &gt;= 2:  # 确保至少有前两个元素用于匹配
+            key = tup[:2]  # 取前两个元素作为匹配键
+            lookup_dict[key] = idx
+    
+    # 创建计数列表
+    counts = [0] * len(list_target)
+    sums = [0] * len(list_target)
+    
+    # 遍历list_a进行匹配
+    for tup_a in list_src:
+        if len(tup_a) &gt;= index_b + 1:
+            key = (tup_a[index_a], tup_a[index_b]) 
+            if key in lookup_dict:
+                idx = lookup_dict[key]
+                counts[idx] += 1
+                sums[idx] += float(tup_a[1])
+    # 创建结果列表
+    result = []
+    for tup_b, count, sum in zip(list_target, counts, sums):
+        result.append(tup_b + (count, 0 if count == 0 else sum/count))
+    
+    return result</code></pre>
+</details>
+<div class="desc"><p>统计list_src中元组的指定元素在list_target中的出现次数，并计算其他元素的平均值</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>list_src</code></strong> :&ensp;<code>List[Tuple[Any, &hellip;]]</code></dt>
+<dd>源元组列表</dd>
+<dt><strong><code>list_target</code></strong> :&ensp;<code>List[Tuple[Any, &hellip;]]</code></dt>
+<dd>目标元组列表</dd>
+<dt><strong><code>index_a</code></strong> :&ensp;<code>int</code></dt>
+<dd>要统计第一个元素的索引</dd>
+<dt><strong><code>index_b</code></strong> :&ensp;<code>int</code></dt>
+<dd>要统计第二个元素的索引</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>List[Tuple[Any, &hellip;]]</code></dt>
+<dd>更新后的list_target，每个元组末尾添加了计数和平均值</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.collect_pattern_files"><code class="name flex">
+<span>def <span class="ident">collect_pattern_files</span></span>(<span>pattern: str, target_dir: str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def collect_pattern_files(pattern: str, target_dir: str):
+    &#34;&#34;&#34;
+    将当下目录及子目录下所有满足特定正则表达式的文件复制到创建的新文件夹中
+
+    Args:
+        pattern (str): 正则表达式字符串
+
+        target_dir (str): 目标新文件夹
+    
+    &#34;&#34;&#34;
+    # 创建正则表达式模式
+    pattern = re.compile(pattern)
+    # 创建目标文件夹
+    os.makedirs(target_dir, exist_ok=True)
+    # 遍历当前目录及所有子目录
+    copied_count = 0
+    for root, dirs, files in os.walk(&#34;.&#34;):
+        # 关键修改：从dirs列表中移除目标文件夹，使其不会被遍历
+        if target_dir in dirs:
+            dirs.remove(target_dir)
+
+        for file in files:
+            if pattern.match(file):
+                source_path = os.path.join(root, file)
+                target_path = os.path.join(target_dir, file)
+
+                # 处理同名文件
+                counter = 1
+                original_target = target_path
+                while os.path.exists(target_path):
+                    name, ext = os.path.splitext(file)
+                    target_path = os.path.join(target_dir, f&#34;{name}_{counter}{ext}&#34;)
+                    counter += 1
+
+                try:
+                    shutil.copy2(source_path, target_path)
+                    print(f&#34;已复制: {source_path} -&gt; {target_path}&#34;)
+                    copied_count += 1
+                except Exception as e:
+                    print(f&#34;复制失败 {source_path}: {e}&#34;)
+
+    print(f&#34;\n完成！共复制了 {copied_count} 个文件到 &#39;{target_dir}&#39; 文件夹&#34;)</code></pre>
+</details>
+<div class="desc"><p>将当下目录及子目录下所有满足特定正则表达式的文件复制到创建的新文件夹中</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>pattern</code></strong> :&ensp;<code>str</code></dt>
+<dd>正则表达式字符串</dd>
+<dt><strong><code>target_dir</code></strong> :&ensp;<code>str</code></dt>
+<dd>目标新文件夹</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.color_atoms_in_trajectory"><code class="name flex">
+<span>def <span class="ident">color_atoms_in_trajectory</span></span>(<span>trajectory_file: str,<br>rgb_color: list,<br>atom_indices: list,<br>output_file: str = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def color_atoms_in_trajectory(trajectory_file: str, rgb_color: list, atom_indices: list, output_file: str = None):
+    &#34;&#34;&#34;
+    将指定原子序号列表中的原子染成指定的RGB颜色，并生成新的轨迹文件
+    
+    Args:
+        trajectory_file (str): 输入轨迹文件的路径 (xyz格式)
+        rgb_color (list): RGB颜色值列表，范围[0.0, 1.0]，如[1.0, 0.0, 0.0]表示红色
+        atom_indices (list): 要染色的原子序号列表
+        output_file (str): 输出文件路径。如果不指定，则在原文件名后添加&#34;_colored&#34;
+    
+    Returns:
+        output_file (str): 输出文件路径
+    &#34;&#34;&#34;
+    # 验证输入参数
+    if len(rgb_color) != 3:
+        raise ValueError(&#34;RGB颜色必须是包含3个值的列表，如[1.0, 0.0, 0.0]&#34;)
+    
+    for value in rgb_color:
+        if value &lt; 0.0 or value &gt; 1.0:
+            raise ValueError(&#34;RGB颜色值必须在[0.0, 1.0]范围内&#34;)
+    
+    if not atom_indices:
+        raise ValueError(&#34;原子序号列表不能为空&#34;)
+    
+    # 设置输出文件名
+    if output_file is None:
+        base_name = os.path.splitext(trajectory_file)[0]
+        output_file = f&#34;{base_name}_colored.xyz&#34;
+    
+    # 加载轨迹文件
+    print(f&#34;加载轨迹文件: {trajectory_file}&#34;)
+    pipeline = import_file(trajectory_file)
+    
+    # 创建原子选择表达式
+    # 将原子序号列表转换为ParticleIndex选择表达式
+    expr_parts = []
+    for atom_idx in atom_indices:
+        # 转换为字符串
+        expr_parts.append(f&#34;ParticleIndex == {atom_idx}&#34;)
+    
+    # 如果原子列表为空，则选择所有原子
+    if not expr_parts:
+        selection_expr = &#34;1&#34;  # 选择所有原子
+    else:
+        # 用&#34;或&#34;操作符连接所有条件
+        selection_expr = &#34; || &#34;.join(expr_parts)
+    
+    print(f&#34;选择表达式: {selection_expr}&#34;)
+    print(f&#34;要染色的原子数: {len(atom_indices)}&#34;)
+    
+    # 创建并添加选择修改器
+    selection_modifier = ExpressionSelectionModifier(expression=selection_expr)
+    pipeline.modifiers.append(selection_modifier)
+    
+    # 创建并添加颜色修改器
+    # AssignColorModifier默认只对选中的原子染色
+    color_modifier = AssignColorModifier(color=rgb_color)
+    pipeline.modifiers.append(color_modifier)
+    
+    # 导出染色后的轨迹
+    print(f&#34;正在导出染色后的轨迹到: {output_file}&#34;)
+    export_file(
+        pipeline,
+        output_file,
+        &#34;xyz&#34;,
+        multiple_frames=True,
+        columns=[&#34;Particle Identifier&#34;, &#34;Particle Type&#34;, 
+                &#34;Position.X&#34;, &#34;Position.Y&#34;, &#34;Position.Z&#34;, &#34;Color&#34;]
+    )
+    
+    print(f&#34;轨迹文件已成功导出: {output_file}&#34;)
+    return output_file</code></pre>
+</details>
+<div class="desc"><p>将指定原子序号列表中的原子染成指定的RGB颜色，并生成新的轨迹文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>trajectory_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入轨迹文件的路径 (xyz格式)</dd>
+<dt><strong><code>rgb_color</code></strong> :&ensp;<code>list</code></dt>
+<dd>RGB颜色值列表，范围[0.0, 1.0]，如[1.0, 0.0, 0.0]表示红色</dd>
+<dt><strong><code>atom_indices</code></strong> :&ensp;<code>list</code></dt>
+<dd>要染色的原子序号列表</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输出文件路径。如果不指定，则在原文件名后添加"_colored"</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>output_file (str): 输出文件路径</p></div>
+</dd>
+<dt id="dcg_sci_tool.color_atoms_in_trajectory_multicolor"><code class="name flex">
+<span>def <span class="ident">color_atoms_in_trajectory_multicolor</span></span>(<span>trajectory_file: str, atom_color_map: dict, output_file: str = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def color_atoms_in_trajectory_multicolor(trajectory_file: str, atom_color_map: dict, output_file: str = None):
+    &#34;&#34;&#34;
+    将轨迹中不同原子染成不同颜色
+    
+    Args:
+        trajectory_file (str): 输入轨迹文件的路径 (xyz格式)
+        atom_color_map (dict): 字典，键为原子序号，值为RGB颜色列表
+            示例: {0: [1.0, 0.0, 0.0], 1: [0.0, 1.0, 0.0]}
+        output_file (str): 输出文件路径
+    
+    Returns:
+        output_file (str): 输出文件路径
+    &#34;&#34;&#34;
+    if not atom_color_map:
+        raise ValueError(&#34;原子颜色映射字典不能为空&#34;)
+    
+    # 设置输出文件名
+    if output_file is None:
+        base_name = os.path.splitext(trajectory_file)[0]
+        output_file = f&#34;{base_name}_multicolored.xyz&#34;
+    
+    # 加载轨迹文件
+    print(f&#34;加载轨迹文件: {trajectory_file}&#34;)
+    pipeline = import_file(trajectory_file)
+    
+    # 为每个原子创建单独的选择和染色
+    for atom_idx, rgb_color in atom_color_map.items():
+        # 验证颜色
+        if len(rgb_color) != 3:
+            raise ValueError(f&#34;原子{atom_idx}的RGB颜色必须是包含3个值的列表&#34;)
+        
+        for value in rgb_color:
+            if value &lt; 0.0 or value &gt; 1.0:
+                raise ValueError(f&#34;原子{atom_idx}的RGB颜色值必须在[0.0, 1.0]范围内&#34;)
+        
+        # 创建选择表达式
+        selection_expr = f&#34;ParticleIndex == {atom_idx}&#34;
+        
+        # 创建并添加选择修改器
+        selection_modifier = ExpressionSelectionModifier(expression=selection_expr)
+        pipeline.modifiers.append(selection_modifier)
+        
+        # 创建并添加颜色修改器
+        color_modifier = AssignColorModifier(color=rgb_color)
+        pipeline.modifiers.append(color_modifier)
+    
+    # 导出染色后的轨迹
+    print(f&#34;正在导出多色轨迹到: {output_file}&#34;)
+    print(f&#34;染色原子数: {len(atom_color_map)}&#34;)
+    export_file(
+        pipeline,
+        output_file,
+        &#34;xyz&#34;,
+        multiple_frames=True,
+        columns=[&#34;Particle Identifier&#34;, &#34;Particle Type&#34;, 
+                &#34;Position.X&#34;, &#34;Position.Y&#34;, &#34;Position.Z&#34;, &#34;Color&#34;]
+    )
+    
+    print(f&#34;多色轨迹文件已成功导出: {output_file}&#34;)
+    return output_file</code></pre>
+</details>
+<div class="desc"><p>将轨迹中不同原子染成不同颜色</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>trajectory_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入轨迹文件的路径 (xyz格式)</dd>
+<dt><strong><code>atom_color_map</code></strong> :&ensp;<code>dict</code></dt>
+<dd>字典，键为原子序号，值为RGB颜色列表
+示例: {0: [1.0, 0.0, 0.0], 1: [0.0, 1.0, 0.0]}</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输出文件路径</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>output_file (str): 输出文件路径</p></div>
+</dd>
+<dt id="dcg_sci_tool.construct_CO2_formation_FS"><code class="name flex">
+<span>def <span class="ident">construct_CO2_formation_FS</span></span>(<span>input_file: str, atom_indices: list)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def construct_CO2_formation_FS(input_file: str, atom_indices: list):
+    &#34;&#34;&#34;
+    调整轨迹结构第一帧，使反应物的吸附态CO和吸附态O相向移动，生成吸附态CO2；
     具体：
     1.确定距离吸附态CO的C和吸附态O连线中点最近的Pd或Au原子：middle_metal。
     2.使反应物的吸附态CO和吸附态O相向移动，使C和吸附O距离缩短到1.25Å，
     3.调整吸附态CO中O的位置，使吸附态CO的C-O键长恢复到1.25Å，
     4.整体平移这三个原子，使C和middle_metal距离调整到2.0Å
     
-    参数:
-    input_file: 输入结构文件
-    atom_indices: 两个原子序号的列表 [C_idx, O_ads_idx]
-    output_file: 输出文件名
+    Args:
+
+        input_file (str): 输入结构文件
+
+        atom_indices (list): 两个原子序号的列表 [C_idx, O_ads_idx]
+
+    Returns:
+
+        atoms (Atoms): 构造的末态结构
+
     &#34;&#34;&#34;
     
-    # 读取结构
-    atoms = read(input_file)
+    # 读取结构第一帧
+    atoms = read(input_file, index = 0)
     
-    # 确保提供了四个原子序号
+    # 确保提供了2个原子序号
     if len(atom_indices) != 2:
         raise ValueError(&#34;需要 exactly 两个原子序号: C_idx, O_ads_idx&#34;)
     
@@ -358,22 +955,360 @@ This package is designed to be easy to use and integrate into various scientific
         if abs(final_C_middle_metal_dist - 2.00) &gt;= 0.01:
             print(f&#34;  C-中心金属原子距离误差: {abs(final_C_middle_metal_dist - 2.00):.3f} Å&#34;)
     
-    # 保存结果
-    write(output_file, atoms)
-    print(f&#34;结构调整完成，结果保存到 {output_file}&#34;)
     
     return atoms</code></pre>
 </details>
-<div class="desc"><p>调整结构，使反应物的吸附态CO和吸附态O相向移动，生成吸附态CO2；
+<div class="desc"><p>调整轨迹结构第一帧，使反应物的吸附态CO和吸附态O相向移动，生成吸附态CO2；
 具体：
 1.确定距离吸附态CO的C和吸附态O连线中点最近的Pd或Au原子：middle_metal。
 2.使反应物的吸附态CO和吸附态O相向移动，使C和吸附O距离缩短到1.25Å，
 3.调整吸附态CO中O的位置，使吸附态CO的C-O键长恢复到1.25Å，
 4.整体平移这三个原子，使C和middle_metal距离调整到2.0Å</p>
-<p>参数:
-input_file: 输入结构文件
-atom_indices: 两个原子序号的列表 [C_idx, O_ads_idx]
-output_file: 输出文件名</p></div>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入结构文件</dd>
+<dt><strong><code>atom_indices</code></strong> :&ensp;<code>list</code></dt>
+<dd>两个原子序号的列表 [C_idx, O_ads_idx]</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>atoms (Atoms): 构造的末态结构</p></div>
+</dd>
+<dt id="dcg_sci_tool.construct_final_state"><code class="name flex">
+<span>def <span class="ident">construct_final_state</span></span>(<span>minimized_is_path, target_atom_list)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def construct_final_state(minimized_is_path, target_atom_list):
+    &#34;&#34;&#34;
+    在自动截取MD轨迹的算能垒的自动化流程中，构建末态结构
+    Args:
+        minimized_is_path (Path): 最小化后的结构文件路径
+        target_atom_list (list): 目标原子列表
+    Returns:
+        tuple: 包含末态结构对象和文件路径的元组
+        atoms_fs (ASE atoms object): 末态结构对象
+        fs_path (Path): 末态结构文件路径
+    &#34;&#34;&#34;
+    print(&#34;\n&#34; + &#34;=&#34; * 60)
+    print(&#34;步骤 2: 构建末态结构&#34;)
+    print(&#34;=&#34; * 60)
+    
+    atoms_fs = construct_CO2_formation_FS(str(minimized_is_path), target_atom_list)
+    fs_path = minimized_is_path.parent / &#34;constructed_FS.xyz&#34;
+    write(str(fs_path), format=&#34;extxyz&#34;, images=atoms_fs)
+    
+    print(f&#34;末态结构已保存到: {fs_path}&#34;)
+    return atoms_fs, fs_path</code></pre>
+</details>
+<div class="desc"><p>在自动截取MD轨迹的算能垒的自动化流程中，构建末态结构</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>minimized_is_path</code></strong> :&ensp;<code>Path</code></dt>
+<dd>最小化后的结构文件路径</dd>
+<dt><strong><code>target_atom_list</code></strong> :&ensp;<code>list</code></dt>
+<dd>目标原子列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>包含末态结构对象和文件路径的元组</dd>
+</dl>
+<p>atoms_fs (ASE atoms object): 末态结构对象
+fs_path (Path): 末态结构文件路径</p></div>
+</dd>
+<dt id="dcg_sci_tool.create_categorical_heatmap"><code class="name flex">
+<span>def <span class="ident">create_categorical_heatmap</span></span>(<span>data_tuples,<br>x_label_index,<br>y_label_index,<br>value_index,<br>x_labels_order=None,<br>y_labels_order=None,<br>title='Categorical Heatmap',<br>xlabel=None,<br>ylabel=None,<br>cmap='YlGn',<br>cbarlabel='Value',<br>figsize=(10, 8))</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_categorical_heatmap(
+    data_tuples, 
+    x_label_index, 
+    y_label_index, 
+    value_index,
+    x_labels_order=None,  # 新增：横轴标签顺序
+    y_labels_order=None,  # 新增：纵轴标签顺序
+    title=&#34;Categorical Heatmap&#34;,
+    xlabel=None,
+    ylabel=None,
+    cmap=&#34;YlGn&#34;,
+    cbarlabel=&#34;Value&#34;,
+    figsize=(10, 8)
+):
+    &#34;&#34;&#34;
+    从元组列表创建分类热力图（支持指定标签顺序）
+    使用方法：执行完此函数后，执行plt.show()命令，即可将图片展示出来
+    
+    Args:
+
+        data_tuples (list of tuples): 输入数据，每个元组包含：横轴标签、纵轴标签、数值
+        x_label_index (int): 元组中横轴标签的索引位置
+        y_label_index (int): 元组中纵轴标签的索引位置
+        value_index (int): 元组中数值的索引位置
+        x_labels_order (list, optional): 横轴标签的排列顺序
+        y_labels_order (list, optional): 纵轴标签的排列顺序
+        title (str, optional): 热力图的标题
+        xlabel (str, optional): 横轴标签
+        ylabel (str, optional): 纵轴标签
+        cmap (str, optional): 颜色映射
+        cbarlabel (str, optional): 颜色条标签
+        figsize (tuple, optional): 图形大小
+    
+    Returns:
+        tuple: 包含创建的图形、坐标轴对象和数据矩阵
+            fig (matplotlib.figure.Figure): 创建的图形
+            ax (matplotlib.axes.Axes): 坐标轴对象
+            data_matrix (numpy.ndarray): 热力图数据矩阵
+    &#34;&#34;&#34;
+    
+    # 修改prepare_heatmap_data函数以支持指定顺序
+    data_matrix, x_labels, y_labels = prepare_heatmap_data_ordered(
+        data_tuples, 
+        x_label_index, 
+        y_label_index, 
+        value_index,
+        x_labels_order,
+        y_labels_order
+    )
+    
+    # 创建图形
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # 绘制热力图
+    im = ax.imshow(data_matrix, cmap=cmap, aspect=&#39;auto&#39;)
+    
+    # 设置坐标轴标签
+    ax.set_xticks(range(len(x_labels)))
+    ax.set_yticks(range(len(y_labels)))
+    ax.set_xticklabels(x_labels, rotation=45, ha=&#34;right&#34;, rotation_mode=&#34;anchor&#34;)
+    ax.set_yticklabels(y_labels)
+    
+    # 添加数值标注
+    for i in range(len(y_labels)):
+        for j in range(len(x_labels)):
+            value = data_matrix[i, j]
+            if not np.isnan(value):
+                # 格式化显示：如果是整数显示整数，否则显示两位小数
+                if value.is_integer():
+                    text = f&#34;{int(value)}&#34;
+                else:
+                    text = f&#34;{value:.2f}&#34;
+                ax.text(j, i, text, ha=&#34;center&#34;, va=&#34;center&#34;, 
+                       color=&#34;w&#34; if value &gt; np.nanmax(data_matrix)/2 else &#34;black&#34;)
+    
+    # 添加颜色条
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va=&#34;bottom&#34;)
+    
+    # 设置标题和轴标签
+    ax.set_title(title, fontsize=14, fontweight=&#39;bold&#39;, pad=20)
+    
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=18)
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=18)
+    
+    # 调整布局
+    fig.tight_layout()
+    
+    return fig, ax, data_matrix</code></pre>
+</details>
+<div class="desc"><p>从元组列表创建分类热力图（支持指定标签顺序）
+使用方法：执行完此函数后，执行plt.show()命令，即可将图片展示出来</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data_tuples</code></strong> :&ensp;<code>list</code> of <code>tuples</code></dt>
+<dd>输入数据，每个元组包含：横轴标签、纵轴标签、数值</dd>
+<dt><strong><code>x_label_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>元组中横轴标签的索引位置</dd>
+<dt><strong><code>y_label_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>元组中纵轴标签的索引位置</dd>
+<dt><strong><code>value_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>元组中数值的索引位置</dd>
+<dt><strong><code>x_labels_order</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>横轴标签的排列顺序</dd>
+<dt><strong><code>y_labels_order</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>纵轴标签的排列顺序</dd>
+<dt><strong><code>title</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>热力图的标题</dd>
+<dt><strong><code>xlabel</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>横轴标签</dd>
+<dt><strong><code>ylabel</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>纵轴标签</dd>
+<dt><strong><code>cmap</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>颜色映射</dd>
+<dt><strong><code>cbarlabel</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>颜色条标签</dd>
+<dt><strong><code>figsize</code></strong> :&ensp;<code>tuple</code>, optional</dt>
+<dd>图形大小</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>包含创建的图形、坐标轴对象和数据矩阵
+fig (matplotlib.figure.Figure): 创建的图形
+ax (matplotlib.axes.Axes): 坐标轴对象
+data_matrix (numpy.ndarray): 热力图数据矩阵</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.create_categorical_heatmap_advanced"><code class="name flex">
+<span>def <span class="ident">create_categorical_heatmap_advanced</span></span>(<span>data_tuples,<br>x_label_index,<br>y_label_index,<br>value_index,<br>x_labels_order=None,<br>y_labels_order=None,<br>title='Categorical Heatmap',<br>cmap='YlGn',<br>cbarlabel='Value',<br>figsize=(12, 10),<br>annotate=True,<br>valfmt='{x:.2f}',<br>threshold=None,<br>textcolors=('black', 'white'),<br>grid_visible=True)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_categorical_heatmap_advanced(
+    data_tuples, 
+    x_label_index, 
+    y_label_index, 
+    value_index,
+    x_labels_order=None,  # 新增：横轴标签顺序
+    y_labels_order=None,  # 新增：纵轴标签顺序
+    title=&#34;Categorical Heatmap&#34;,
+    cmap=&#34;YlGn&#34;,
+    cbarlabel=&#34;Value&#34;,
+    figsize=(12, 10),
+    annotate=True,
+    valfmt=&#34;{x:.2f}&#34;,
+    threshold=None,
+    textcolors=(&#34;black&#34;, &#34;white&#34;),
+    grid_visible=True
+):
+    &#34;&#34;&#34;
+    增强版的分类热力图创建函数（支持指定标签顺序）
+    使用方法：执行完此函数后，执行plt.show()命令，即可将图片展示出来
+    
+    Args:
+        data_tuples (list of tuples): 输入数据，每个元组包含：横轴标签、纵轴标签、数值
+        x_label_index (int): 元组中横轴标签的索引位置
+        y_label_index (int): 元组中纵轴标签的索引位置
+        value_index (int): 元组中数值的索引位置
+        x_labels_order (list): 横轴标签的排列顺序
+        y_labels_order (list): 纵轴标签的排列顺序
+        y_labels_order (list, optional): 纵轴标签的排列顺序
+        annotate (bool, optional): 是否在方格中添加数值标注
+        valfmt (str, optional): 数值格式化字符串
+        threshold (float, optional): 文本颜色切换的阈值
+        textcolors (tuple, optional):  用于阈值上下方的文本颜色
+        grid_visible (bool, optional):  是否显示网格线
+
+    &#34;&#34;&#34;
+    data_matrix, x_labels, y_labels = prepare_heatmap_data_ordered(
+        data_tuples, 
+        x_label_index, 
+        y_label_index, 
+        value_index,
+        x_labels_order,
+        y_labels_order
+    )
+    
+    # 处理NaN值（用0或其他默认值替换）
+    data_matrix_filled = np.nan_to_num(data_matrix, nan=0.0)
+    
+    # 创建图形
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # 绘制热力图
+    im = ax.imshow(data_matrix_filled, cmap=cmap, aspect=&#39;auto&#39;)
+    
+    # 设置坐标轴
+    ax.set_xticks(range(len(x_labels)))
+    ax.set_yticks(range(len(y_labels)))
+    ax.set_xticklabels(x_labels, rotation=-30, ha=&#34;right&#34;, rotation_mode=&#34;anchor&#34;)
+    ax.set_yticklabels(y_labels)
+    
+    # 在顶部显示横轴标签
+    ax.tick_params(top=True, bottom=False, labeltop=True, labelbottom=False)
+    
+    # 添加网格线
+    if grid_visible:
+        ax.set_xticks(np.arange(data_matrix_filled.shape[1] + 1) - 0.5, minor=True)
+        ax.set_yticks(np.arange(data_matrix_filled.shape[0] + 1) - 0.5, minor=True)
+        ax.grid(which=&#34;minor&#34;, color=&#34;w&#34;, linestyle=&#39;-&#39;, linewidth=2)
+        ax.tick_params(which=&#34;minor&#34;, bottom=False, left=False)
+    
+    # 隐藏边框
+    ax.spines[:].set_visible(False)
+    
+    # 添加数值标注
+    if annotate:
+        # 确定阈值
+        if threshold is None:
+            threshold = np.nanmax(data_matrix_filled) / 2
+        
+        # 格式化器
+        if isinstance(valfmt, str):
+            valfmt_func = matplotlib.ticker.StrMethodFormatter(valfmt)
+        else:
+            valfmt_func = valfmt
+        
+        # 添加文本标注
+        for i in range(data_matrix_filled.shape[0]):
+            for j in range(data_matrix_filled.shape[1]):
+                value = data_matrix_filled[i, j]
+                if not np.isnan(value) and value != 0:  # 跳过NaN和0值
+                    # 根据阈值选择文本颜色
+                    text_color = textcolors[1] if value &gt; threshold else textcolors[0]
+                    
+                    # 格式化文本
+                    if isinstance(valfmt_func, matplotlib.ticker.StrMethodFormatter):
+                        text = valfmt_func.format_data(value)
+                    else:
+                        text = str(int(value)) if value.is_integer() else f&#34;{value:.2f}&#34;
+                    
+                    ax.text(j, i, text, ha=&#34;center&#34;, va=&#34;center&#34;, 
+                           color=text_color, fontweight=&#39;bold&#39;)
+    
+    # 添加颜色条
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va=&#34;bottom&#34;)
+    
+    # 设置标题
+    ax.set_title(title, fontsize=16, fontweight=&#39;bold&#39;, pad=20)
+    
+    # 调整布局
+    fig.tight_layout()
+    
+    return fig, ax, data_matrix_filled</code></pre>
+</details>
+<div class="desc"><p>增强版的分类热力图创建函数（支持指定标签顺序）
+使用方法：执行完此函数后，执行plt.show()命令，即可将图片展示出来</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data_tuples</code></strong> :&ensp;<code>list</code> of <code>tuples</code></dt>
+<dd>输入数据，每个元组包含：横轴标签、纵轴标签、数值</dd>
+<dt><strong><code>x_label_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>元组中横轴标签的索引位置</dd>
+<dt><strong><code>y_label_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>元组中纵轴标签的索引位置</dd>
+<dt><strong><code>value_index</code></strong> :&ensp;<code>int</code></dt>
+<dd>元组中数值的索引位置</dd>
+<dt><strong><code>x_labels_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>横轴标签的排列顺序</dd>
+<dt><strong><code>y_labels_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>纵轴标签的排列顺序</dd>
+<dt><strong><code>y_labels_order</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>纵轴标签的排列顺序</dd>
+<dt><strong><code>annotate</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>是否在方格中添加数值标注</dd>
+<dt><strong><code>valfmt</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>数值格式化字符串</dd>
+<dt><strong><code>threshold</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>文本颜色切换的阈值</dd>
+<dt><strong><code>textcolors</code></strong> :&ensp;<code>tuple</code>, optional</dt>
+<dd>用于阈值上下方的文本颜色</dd>
+<dt><strong><code>grid_visible</code></strong> :&ensp;<code>bool</code>, optional</dt>
+<dd>是否显示网格线</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.create_filtered_structure"><code class="name flex">
 <span>def <span class="ident">create_filtered_structure</span></span>(<span>data,<br>type_names_order: List[str],<br>keep_indexes_list: List[int],<br>old_indexes: List[int]) ‑> ase.atoms.Atoms</span>
@@ -389,7 +1324,7 @@ output_file: 输出文件名</p></div>
                              old_indexes :List[int]
                              ) -&gt; Atoms:
     &#34;&#34;&#34;
-    根据保留的原子索引创建新的ASE结构
+    根据保留的原子索引创建新的ASE结构，并找到旧索引对应的新索引
     
     Args:
 
@@ -446,7 +1381,7 @@ output_file: 输出文件名</p></div>
 
     return new_atoms, new_indexes</code></pre>
 </details>
-<div class="desc"><p>根据保留的原子索引创建新的ASE结构</p>
+<div class="desc"><p>根据保留的原子索引创建新的ASE结构，并找到旧索引对应的新索引</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong></dt>
@@ -462,6 +1397,142 @@ output_file: 输出文件名</p></div>
 <p>new_atoms (ASE Atoms): 新的ASE原子对象</p>
 <p>new_indexes (list): 旧索引old_indexes对应的新的原子索引列表</p></div>
 </dd>
+<dt id="dcg_sci_tool.create_workspace"><code class="name flex">
+<span>def <span class="ident">create_workspace</span></span>(<span>dir_name, required_files=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def create_workspace(dir_name, required_files=None):
+    &#34;&#34;&#34;
+    创建工作目录并复制必要文件
+    Args:
+        dir_name (str): 工作目录名称
+        required_files (list, optional): 必要文件列表。默认值为空列表。
+    
+    &#34;&#34;&#34;
+    if required_files is None:
+        required_files = []
+    
+    workspace = Path(dir_name)
+    workspace.mkdir(exist_ok=True)
+    print(f&#34;创建/进入工作目录: {workspace}&#34;)
+    
+    # 复制必要文件
+    for file in required_files:
+        src = Path(file)
+        if src.exists():
+            shutil.copy2(src, workspace)
+            print(f&#34;  复制: {file}&#34;)
+        else:
+            print(f&#34;  警告: 文件不存在 {file}&#34;)
+    
+    return workspace</code></pre>
+</details>
+<div class="desc"><p>创建工作目录并复制必要文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>dir_name</code></strong> :&ensp;<code>str</code></dt>
+<dd>工作目录名称</dd>
+<dt><strong><code>required_files</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>必要文件列表。默认值为空列表。</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.csv2xyz"><code class="name flex">
+<span>def <span class="ident">csv2xyz</span></span>(<span>input_file: str,<br>x_col: int,<br>y_col: int,<br>z_col: int,<br>color_col: int,<br>vmin=None,<br>vmax=None,<br>max_color=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def csv2xyz(input_file: str, x_col: int, y_col: int, z_col: int, color_col: int, vmin=None, vmax=None, max_color=None):
+    &#34;&#34;&#34;
+    将.csv文件中指定列的数据绘制成三维散点图，并将结果保存为plot.xyz文件
+    Args:
+        input_file: 输入的CSV文件路径
+        x_col: 用于x坐标的列索引
+        y_col: 用于y坐标的列索引
+        z_col: 用于z坐标的列索引
+        color_col: 用于颜色映射的数值列索引
+        vmin: 可选的最小值，用于归一化。如果为None，将使用输入数组的最小值。
+        vmax: 可选的最大值，用于归一化。如果为None，将使用输入数组的最大值。
+        max_color: 可选的最大颜色值，用于超出范围时的颜色，如果为None，将使用黄色
+    &#34;&#34;&#34;
+    data_list = csv_to_tuples(input_file, has_header=True)
+
+    data_list = np.array(data_list)
+    x = data_list[:, x_col].astype(float)
+    y = data_list[:, y_col].astype(float)
+    z = data_list[:, z_col].astype(float)
+    colors = data_list[:, color_col].astype(float)
+
+    scatter_xyz(x, y, z, colors, vmin=vmin, vmax=vmax, max_color=max_color)</code></pre>
+</details>
+<div class="desc"><p>将.csv文件中指定列的数据绘制成三维散点图，并将结果保存为plot.xyz文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong></dt>
+<dd>输入的CSV文件路径</dd>
+<dt><strong><code>x_col</code></strong></dt>
+<dd>用于x坐标的列索引</dd>
+<dt><strong><code>y_col</code></strong></dt>
+<dd>用于y坐标的列索引</dd>
+<dt><strong><code>z_col</code></strong></dt>
+<dd>用于z坐标的列索引</dd>
+<dt><strong><code>color_col</code></strong></dt>
+<dd>用于颜色映射的数值列索引</dd>
+<dt><strong><code>vmin</code></strong></dt>
+<dd>可选的最小值，用于归一化。如果为None，将使用输入数组的最小值。</dd>
+<dt><strong><code>vmax</code></strong></dt>
+<dd>可选的最大值，用于归一化。如果为None，将使用输入数组的最大值。</dd>
+<dt><strong><code>max_color</code></strong></dt>
+<dd>可选的最大颜色值，用于超出范围时的颜色，如果为None，将使用黄色</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.csv_to_tuples"><code class="name flex">
+<span>def <span class="ident">csv_to_tuples</span></span>(<span>csv_file: str, has_header: bool = True) ‑> list</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def csv_to_tuples(csv_file: str, has_header: bool = True) -&gt; list:
+    &#34;&#34;&#34;
+    将CSV文件转换为元组列表
+    
+    Args:
+        csv_file (str): CSV文件路径
+        has_header (bool): 是否包含表头
+    
+    Returns:
+        list: 元组列表
+    &#34;&#34;&#34;
+    with open(csv_file, &#39;r&#39;, encoding=&#39;utf-8&#39;) as f:
+        reader = csv.reader(f)
+        
+        if has_header:
+            next(reader)  # 跳过表头
+        
+        return [tuple(row) for row in reader]</code></pre>
+</details>
+<div class="desc"><p>将CSV文件转换为元组列表</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>csv_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>CSV文件路径</dd>
+<dt><strong><code>has_header</code></strong> :&ensp;<code>bool</code></dt>
+<dd>是否包含表头</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>元组列表</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.detect_CO_CO2_molecules"><code class="name flex">
 <span>def <span class="ident">detect_CO_CO2_molecules</span></span>(<span>data, type_names_order)</span>
 </code></dt>
@@ -473,7 +1544,7 @@ output_file: 输出文件名</p></div>
 <pre><code class="python">def detect_CO_CO2_molecules(data, type_names_order):
     &#34;&#34;&#34;
     识别输入帧中的CO和CO2分子，返回输入帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。
-
+    考虑了周期性边界条件。
     Args:
 
         data (DataCollection): 结构的ovito数据集合
@@ -543,7 +1614,8 @@ output_file: 输出文件名</p></div>
     
     return CO_amount, CO2_amount, CO_atoms_indexes, CO2_atoms_indexes, co_molecules, co2_molecules</code></pre>
 </details>
-<div class="desc"><p>识别输入帧中的CO和CO2分子，返回输入帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。</p>
+<div class="desc"><p>识别输入帧中的CO和CO2分子，返回输入帧中CO和CO2分子的数量，以及构成CO和CO2分子的原子序号列表。
+考虑了周期性边界条件。</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
@@ -566,17 +1638,17 @@ output_file: 输出文件名</p></div>
 </dl></div>
 </dd>
 <dt id="dcg_sci_tool.detect_CO_coordinating_to_PdAu"><code class="name flex">
-<span>def <span class="ident">detect_CO_coordinating_to_PdAu</span></span>(<span>data,<br>type_names_order,<br>co_molecules,<br>c_pd_cutoff=2.5,<br>o_pd_cutoff=2.1,<br>c_au_cutoff=2.5,<br>o_au_cutoff=2.2)</span>
+<span>def <span class="ident">detect_CO_coordinating_to_PdAu</span></span>(<span>data,<br>type_names_order,<br>co_molecules,<br>c_pd_cutoff=2.5,<br>o_pd_cutoff=2.5,<br>c_au_cutoff=2.5,<br>o_au_cutoff=2.5)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def detect_CO_coordinating_to_PdAu(data, type_names_order, co_molecules, c_pd_cutoff=2.5, o_pd_cutoff=2.1, c_au_cutoff=2.5, o_au_cutoff=2.2):
+<pre><code class="python">def detect_CO_coordinating_to_PdAu(data, type_names_order, co_molecules, c_pd_cutoff=2.5, o_pd_cutoff=2.5, c_au_cutoff=2.5, o_au_cutoff=2.5):
     &#34;&#34;&#34;
     识别输入帧与PdAu配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。
-
+    考虑了周期性边界条件。
     Args:
         data (DataCollection): 结构的ovito数据集合
         
@@ -586,11 +1658,11 @@ output_file: 输出文件名</p></div>
         
         cpd_cutoff (float): C原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å
         
-        opd_cutoff (float): O原子与Pd配位的距离阈值，单位为Å，默认为2.1 Å
+        opd_cutoff (float): O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å
 
         cau_cutoff (float): C原子与Au配位的距离阈值，单位为Å，默认为2.5 Å
 
-        oau_cutoff (float): O原子与Au配位的距离阈值，单位为Å，默认为2.2 Å
+        oau_cutoff (float): O原子与Au配位的距离阈值，单位为Å，默认为2.5 Å
 
     Returns:
         tuple: CO分子信息
@@ -681,7 +1753,8 @@ output_file: 输出文件名</p></div>
     total_co = len(co_molecules)
     return co_pdau_count, total_co, co_pdau_details</code></pre>
 </details>
-<div class="desc"><p>识别输入帧与PdAu配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。</p>
+<div class="desc"><p>识别输入帧与PdAu配位的CO分子，返回与Pd配位的CO数量、总CO分子数，与Pd配位的CO分子详情列表。
+考虑了周期性边界条件。</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
@@ -693,11 +1766,11 @@ output_file: 输出文件名</p></div>
 <dt><strong><code>cpd_cutoff</code></strong> :&ensp;<code>float</code></dt>
 <dd>C原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å</dd>
 <dt><strong><code>opd_cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>O原子与Pd配位的距离阈值，单位为Å，默认为2.1 Å</dd>
+<dd>O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å</dd>
 <dt><strong><code>cau_cutoff</code></strong> :&ensp;<code>float</code></dt>
 <dd>C原子与Au配位的距离阈值，单位为Å，默认为2.5 Å</dd>
 <dt><strong><code>oau_cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>O原子与Au配位的距离阈值，单位为Å，默认为2.2 Å</dd>
+<dd>O原子与Au配位的距离阈值，单位为Å，默认为2.5 Å</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -712,6 +1785,142 @@ output_file: 输出文件名</p></div>
 </dd>
 </dl></div>
 </dd>
+<dt id="dcg_sci_tool.detect_O2_coordinating_to_PdAu"><code class="name flex">
+<span>def <span class="ident">detect_O2_coordinating_to_PdAu</span></span>(<span>data, type_names_order, o2_molecules, o_pd_cutoff=2.5, o_au_cutoff=2.5)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_O2_coordinating_to_PdAu(data, type_names_order, o2_molecules, o_pd_cutoff=2.5, o_au_cutoff=2.5):
+    &#34;&#34;&#34;
+    识别输入帧中与Pd或Au配位的O2分子，返回与Pd/Au配位的O2数量、总O2分子数，以及与Pd/Au配位的O2分子详情列表。
+    考虑了周期性边界条件。
+
+    Args:
+        data (DataCollection): 结构的ovito数据集合
+        
+        type_names_order (list): 原子类型名称列表，索引对应原子类型编号
+        
+        o2_molecules (list): 所有O2分子列表，每个元素是一个元组，包含第一个O原子序号和第二个O原子序号
+            (例如：[(o1_index1, o2_index1), (o1_index2, o2_index2), ...])
+        
+        o_pd_cutoff (float): O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å
+        
+        o_au_cutoff (float): O原子与Au配位的距离阈值，单位为Å，默认为2.5 Å
+
+    Returns:
+        tuple: O2分子信息
+            o2_pdau_count (int): 与Pd或Au配位的O2分子数量
+            
+            total_o2 (int): 总O2分子数量
+            
+            o2_pdau_details (list): 与Pd或Au配位的O2分子详情列表，每个元素是一个字典，
+                包含以下键：
+                - &#39;o2&#39; (tuple): O2分子的原子序号元组 (o1_index, o2_index)
+                - &#39;o1_pd_neighbors&#39; (list): 第一个O原子与Pd配位的邻居列表
+                - &#39;o1_au_neighbors&#39; (list): 第一个O原子与Au配位的邻居列表
+                - &#39;o2_pd_neighbors&#39; (list): 第二个O原子与Pd配位的邻居列表
+                - &#39;o2_au_neighbors&#39; (list): 第二个O原子与Au配位的邻居列表
+    &#34;&#34;&#34;
+    particles = data.particles
+    if particles is None or not o2_molecules:
+        return 0, 0, []
+    
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    # 创建邻居查找器
+    finder_o_pd = CutoffNeighborFinder(o_pd_cutoff, data)
+    finder_o_au = CutoffNeighborFinder(o_au_cutoff, data)
+    
+    num_atoms = particles.count
+    neighbors_o_pd = {i: [] for i in range(num_atoms)}
+    neighbors_o_au = {i: [] for i in range(num_atoms)}
+    
+    # 生成邻居列表
+    for i in range(num_atoms):
+        # O原子与Pd的邻居列表
+        for neighbor in finder_o_pd.find(i):
+            neighbors_o_pd[i].append(neighbor.index)
+        # O原子与Au的邻居列表
+        for neighbor in finder_o_au.find(i):
+            neighbors_o_au[i].append(neighbor.index)
+    
+    # 计算与Pd或Au配位的O2分子
+    o2_pdau_count = 0
+    o2_pdau_details = []
+    
+    for o1_index, o2_index in o2_molecules:
+        # 检查第一个O原子是否与Pd或Au配位
+        o1_coordinating_pds = []
+        o1_coordinating_aus = []
+        for neighbor_index in neighbors_o_pd[o1_index]:
+            if symbols[neighbor_index] == &#39;Pd&#39;:
+                o1_coordinating_pds.append(neighbor_index)
+        for neighbor_index in neighbors_o_au[o1_index]:
+            if symbols[neighbor_index] == &#39;Au&#39;:
+                o1_coordinating_aus.append(neighbor_index)
+        
+        # 检查第二个O原子是否与Pd或Au配位
+        o2_coordinating_pds = []
+        o2_coordinating_aus = []
+        for neighbor_index in neighbors_o_pd[o2_index]:
+            if symbols[neighbor_index] == &#39;Pd&#39;:
+                o2_coordinating_pds.append(neighbor_index)
+        for neighbor_index in neighbors_o_au[o2_index]:
+            if symbols[neighbor_index] == &#39;Au&#39;:
+                o2_coordinating_aus.append(neighbor_index)
+        
+        # 如果O1或O2与Pd或Au配位，则计为与PdAu配位的O2分子
+        if (o1_coordinating_pds or o2_coordinating_pds or 
+            o1_coordinating_aus or o2_coordinating_aus):
+            o2_pdau_count += 1
+            o2_pdau_details.append({
+                &#39;o2&#39;: (o1_index, o2_index),
+                &#39;o1_pd_neighbors&#39;: o1_coordinating_pds,
+                &#39;o1_au_neighbors&#39;: o1_coordinating_aus,
+                &#39;o2_pd_neighbors&#39;: o2_coordinating_pds,
+                &#39;o2_au_neighbors&#39;: o2_coordinating_aus
+            })
+    
+    total_o2 = len(o2_molecules)
+    return o2_pdau_count, total_o2, o2_pdau_details</code></pre>
+</details>
+<div class="desc"><p>识别输入帧中与Pd或Au配位的O2分子，返回与Pd/Au配位的O2数量、总O2分子数，以及与Pd/Au配位的O2分子详情列表。
+考虑了周期性边界条件。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
+<dd>结构的ovito数据集合</dd>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子类型名称列表，索引对应原子类型编号</dd>
+<dt><strong><code>o2_molecules</code></strong> :&ensp;<code>list</code></dt>
+<dd>所有O2分子列表，每个元素是一个元组，包含第一个O原子序号和第二个O原子序号
+(例如：[(o1_index1, o2_index1), (o1_index2, o2_index2), &hellip;])</dd>
+<dt><strong><code>o_pd_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>O原子与Pd配位的距离阈值，单位为Å，默认为2.5 Å</dd>
+<dt><strong><code>o_au_cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>O原子与Au配位的距离阈值，单位为Å，默认为2.5 Å</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>O2分子信息
+o2_pdau_count (int): 与Pd或Au配位的O2分子数量</p>
+<p>total_o2 (int): 总O2分子数量</p>
+<p>o2_pdau_details (list): 与Pd或Au配位的O2分子详情列表，每个元素是一个字典，
+包含以下键：
+- 'o2' (tuple): O2分子的原子序号元组 (o1_index, o2_index)
+- 'o1_pd_neighbors' (list): 第一个O原子与Pd配位的邻居列表
+- 'o1_au_neighbors' (list): 第一个O原子与Au配位的邻居列表
+- 'o2_pd_neighbors' (list): 第二个O原子与Pd配位的邻居列表
+- 'o2_au_neighbors' (list): 第二个O原子与Au配位的邻居列表</p>
+</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.detect_O2_molecules"><code class="name flex">
 <span>def <span class="ident">detect_O2_molecules</span></span>(<span>data, type_names_order)</span>
 </code></dt>
@@ -723,6 +1932,7 @@ output_file: 输出文件名</p></div>
 <pre><code class="python">def detect_O2_molecules(data,type_names_order):
     &#34;&#34;&#34;
     识别输入帧的O2分子，输出输入帧中O2分子数量、O2的O原子序号列表、O2分子列表。
+    考虑了周期性边界条件。
 
     Args:
 
@@ -777,7 +1987,8 @@ output_file: 输出文件名</p></div>
     O2_amount = len(o2_molecules)
     return O2_amount, O2_indexes, o2_molecules</code></pre>
 </details>
-<div class="desc"><p>识别输入帧的O2分子，输出输入帧中O2分子数量、O2的O原子序号列表、O2分子列表。</p>
+<div class="desc"><p>识别输入帧的O2分子，输出输入帧中O2分子数量、O2的O原子序号列表、O2分子列表。
+考虑了周期性边界条件。</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong> :&ensp;<code>DataCollection</code></dt>
@@ -806,7 +2017,7 @@ output_file: 输出文件名</p></div>
 </summary>
 <pre><code class="python">def detect_gas_molecules_for_deletion(data, type_names_order):
     &#34;&#34;&#34;
-    识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
+    识别需要删除的气态分子：所有CO2，气态O2（即未与Pd/Au配位的O2），气态CO（即未与Pd配位的CO，包括C/O配位）。
     返回需要删除的气态分子原子索引列表。
 
     Args:
@@ -825,7 +2036,7 @@ output_file: 输出文件名</p></div>
         return []
     
     # 使用检测函数
-    N_O2, O2_indices, O2_pairs = detect_O2_molecules(data, type_names_order)
+    N_O2, O2_indices, o2_molecules = detect_O2_molecules(data, type_names_order)
     N_CO, N_CO2, CO_list, CO2_list, co_molecules, co2_molecules = detect_CO_CO2_molecules(data, type_names_order)
     N_single_O, single_O_indices = detect_single_adsorbed_O(data, type_names_order)
     co_pdau_count, total_co, co_pd_details = detect_CO_coordinating_to_PdAu(data, 
@@ -834,12 +2045,27 @@ output_file: 输出文件名</p></div>
                                                                     c_pd_cutoff=3.0, 
                                                                     o_pd_cutoff=2.5,
                                                                     )
+    o2_pdau_count, total_o2, o2_pdau_details = detect_O2_coordinating_to_PdAu(data, 
+                                                                    type_names_order, 
+                                                                    o2_molecules,
+                                                                    o_pd_cutoff=2.5,
+                                                                    o_au_cutoff=2.5,
+                                                                    )
     
     # 需要删除的气态分子原子索引
     gas_atoms_to_delete = set()
     
-    # 1. 所有O2分子都视为气态
-    gas_atoms_to_delete.update(O2_indices)
+    # 1. 只删除未与Pd配位的O2分子（气态O2）
+    adsorbed_O2_indexes = set()
+    # gas_atoms_to_delete.update(O2_indices)
+    for detail in o2_pdau_details:
+        o1_idx, o2_idx = detail[&#39;o2&#39;]
+        adsorbed_O2_indexes.update([o1_idx, o2_idx])
+    
+    # 删除未与Pd配位的O2分子（气态O2）
+    for o_idx in O2_indices:
+        if o_idx not in adsorbed_O2_indexes:  # 这是气态O2
+            gas_atoms_to_delete.update([o_idx])
     
     # 2. 只删除未与Pd配位的CO分子（气态CO）
     # 找出所有与Pd配位的CO分子（吸附态CO，需要保留）
@@ -867,7 +2093,7 @@ output_file: 输出文件名</p></div>
     
     return list(gas_atoms_to_delete)</code></pre>
 </details>
-<div class="desc"><p>识别需要删除的气态分子：所有CO2，所有O2，气态CO（即未与Pd配位的CO，包括C/O配位）。
+<div class="desc"><p>识别需要删除的气态分子：所有CO2，气态O2（即未与Pd/Au配位的O2），气态CO（即未与Pd配位的CO，包括C/O配位）。
 返回需要删除的气态分子原子索引列表。</p>
 <h2 id="args">Args</h2>
 <dl>
@@ -878,6 +2104,73 @@ output_file: 输出文件名</p></div>
 </dl>
 <h2 id="returns">Returns</h2>
 <p>gas_atoms_to_delete (list): 需要删除的气态分子原子索引列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.detect_nearby_ads_for_deletion"><code class="name flex">
+<span>def <span class="ident">detect_nearby_ads_for_deletion</span></span>(<span>data, type_names_order, c_idx, o_idx, cutoff=6.0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def detect_nearby_ads_for_deletion(data, type_names_order, c_idx, o_idx,cutoff = 6.0):
+    &#34;&#34;&#34;
+    找到距离反应物CO的C和反应物O连线中点一定距离内吸附态的原子序号，
+    用于后续删除，分析没有第三方吸附物时的能垒
+
+    Args:
+        data : Ovito DataCollection
+
+        type_names_order (list): 元素顺序列表
+
+        c_idx (int): 反应物CO中C原子序号
+
+        o_idx (int): 反应物O原子的序号
+
+        cutoff (float): 半径范围，默认6 Angstrom
+
+
+    &#34;&#34;&#34;
+    # 获取局部地区的原子，同时保证CO或O2气体分子的完整加入性
+    local_atoms_indexes = get_reaction_local_atoms_list(data, type_names_order,c_idx,o_idx,cutoff)
+    
+    particles = data.particles
+    types = particles.particle_types[...]
+    symbols = np.array([type_names_order[t-1] for t in types])
+    
+    
+
+    local_c_o_to_delete = []
+    # 将Ovito的data对象转化为Atoms对象，用于后续计算距离时考虑周期性边界条件
+    atoms = ovito2atoms(data,type_names_order)
+    for idx in local_atoms_indexes:
+        # 不删除反应物原子
+        if idx == c_idx or idx == o_idx:
+            continue
+        if symbols[idx] == &#39;O&#39; or symbols[idx] == &#39;C&#39;:
+            if symbols[idx] == &#39;O&#39;:
+                # 不删除反应物原子
+                distance = atoms.get_distance(idx, c_idx, mic=True)
+                if distance &lt; 1.5:
+                    continue
+            local_c_o_to_delete.append(idx)
+    
+    return local_c_o_to_delete</code></pre>
+</details>
+<div class="desc"><p>找到距离反应物CO的C和反应物O连线中点一定距离内吸附态的原子序号，
+用于后续删除，分析没有第三方吸附物时的能垒</p>
+<h2 id="args">Args</h2>
+<p>data : Ovito DataCollection</p>
+<dl>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code></dt>
+<dd>元素顺序列表</dd>
+<dt><strong><code>c_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>反应物CO中C原子序号</dd>
+<dt><strong><code>o_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>反应物O原子的序号</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>半径范围，默认6 Angstrom</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.detect_single_adsorbed_O"><code class="name flex">
 <span>def <span class="ident">detect_single_adsorbed_O</span></span>(<span>data, type_names_order)</span>
@@ -1045,6 +2338,186 @@ output_file: 输出文件名</p></div>
 <h2 id="returns">Returns</h2>
 <p>element_list (list): 第一个构型中所有原子类型的列表，保持原始顺序</p></div>
 </dd>
+<dt id="dcg_sci_tool.fast_extract_frames"><code class="name flex">
+<span>def <span class="ident">fast_extract_frames</span></span>(<span>input_file, output_file, start_frame=0, end_frame=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def fast_extract_frames(input_file, output_file, start_frame=0, end_frame=None):
+    &#34;&#34;&#34;
+    提取.xyz轨迹文件中指定帧区间的轨迹到新文件
+
+    Args:
+        input_file (str): 输入轨迹文件路径
+        output_file (str): 输出轨迹文件路径
+        start_frame (int): 起始帧索引（从0开始）
+        end_frame (int): 结束帧索引（包含），None表示到文件末尾
+    &#34;&#34;&#34;
+    with open(input_file, &#39;r&#39;) as infile, open(output_file, &#39;w&#39;) as outfile:
+        frame_count = 0
+        while True:
+            # 读取帧头（原子数）
+            line = infile.readline()
+            if not line:  # 文件结束
+                break
+                
+            natoms = int(line.strip())
+            comment = infile.readline()  # 读取注释行
+            atoms = [infile.readline() for _ in range(natoms)]  # 读取原子数据
+            
+            # 检查是否在指定帧范围内
+            if (end_frame is None or frame_count &lt;= end_frame) and frame_count &gt;= start_frame:
+                outfile.write(f&#34;{natoms}\n&#34;)
+                outfile.write(comment)
+                outfile.writelines(atoms)
+            
+            frame_count += 1
+            if end_frame is not None and frame_count &gt; end_frame:
+                break  # 提前终止读取</code></pre>
+</details>
+<div class="desc"><p>提取.xyz轨迹文件中指定帧区间的轨迹到新文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入轨迹文件路径</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输出轨迹文件路径</dd>
+<dt><strong><code>start_frame</code></strong> :&ensp;<code>int</code></dt>
+<dd>起始帧索引（从0开始）</dd>
+<dt><strong><code>end_frame</code></strong> :&ensp;<code>int</code></dt>
+<dd>结束帧索引（包含），None表示到文件末尾</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.find_and_preprocess_input"><code class="name flex">
+<span>def <span class="ident">find_and_preprocess_input</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_and_preprocess_input():
+    &#34;&#34;&#34;
+    在自动截取MD轨迹的算能垒的自动化流程中，查找并预处理输入文件
+    
+    Returns:
+        cleaned_atoms (ase.Atoms): 清理气体分子后的原子结构
+        target_atom_list (list): 目标原子列表
+        md_snapshot_file (str): MD 快照文件路径
+        co2_indexes (list): 生成的CO2 次序索引列表（非原子序号）
+    &#34;&#34;&#34;
+    md_files = find_matching_files(&#34;.&#34;, r&#39;^CO2_formation_frame.*\.xyz$&#39;)
+    if not md_files:
+        raise FileNotFoundError(&#34;未找到符合模式 &#39;CO2_formation_frame*.xyz&#39; 的 MD 快照文件&#34;)
+    
+    md_snapshot_file = md_files[0]
+    
+    # 获取CO2生成的序号
+    co2_indexes = md_snapshot_file.split(&#39;.&#39;)[0].split(&#39;_&#39;)[4].split(&#39;to&#39;)
+    print(f&#34;找到 MD 快照文件: {md_snapshot_file}&#34;)
+    
+    # 获取目标原子列表
+    print(&#34;获取目标原子列表...&#34;)
+    old_target_atom_list = get_target_atoms_from_MD(md_snapshot_file)
+    
+    # 预处理：删除气体原子
+    cleaned_atoms, target_atom_list = pre_del_gases(
+        input_file=md_snapshot_file,
+        old_indexes_to_transfer=old_target_atom_list
+    )
+    
+    # 保存清理后的结构
+    write(&#34;preprocessed.xyz&#34;, images=cleaned_atoms, format=&#34;extxyz&#34;)
+    print(f&#34;已保存清理后的结构到: preprocessed.xyz&#34;)
+    print(f&#34;目标原子列表: {target_atom_list}&#34;)
+    
+    return cleaned_atoms, target_atom_list, md_snapshot_file, co2_indexes</code></pre>
+</details>
+<div class="desc"><p>在自动截取MD轨迹的算能垒的自动化流程中，查找并预处理输入文件</p>
+<h2 id="returns">Returns</h2>
+<p>cleaned_atoms (ase.Atoms): 清理气体分子后的原子结构
+target_atom_list (list): 目标原子列表
+md_snapshot_file (str): MD 快照文件路径
+co2_indexes (list): 生成的CO2 次序索引列表（非原子序号）</p></div>
+</dd>
+<dt id="dcg_sci_tool.find_and_preprocess_input_no_ads"><code class="name flex">
+<span>def <span class="ident">find_and_preprocess_input_no_ads</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_and_preprocess_input_no_ads():
+    &#34;&#34;&#34;
+    对于计算没有其他吸附物存在时，在自动截取MD轨迹的算能垒的自动化流程中，查找并预处理输入文件
+    包括查找neb优化轨迹文件，删除反应中心附近一定范围内的吸附物，保存清理后的结构轨迹文件，获取CO2生成的序号
+    Returns:
+        tuple:
+        no_pre_ads_atoms: 清理反应中心附近吸附物后的结构原子对象
+
+        target_atom_list: 目标原子列表
+
+        neb_traj_file: neb 优化轨迹文件路径
+        
+        co2_indexes: CO2生成的序号列表
+    &#34;&#34;&#34;
+    neb_traj_files = find_matching_files(&#34;.&#34;, r&#39;^[0-9]+-[0-9]+_[0-9]\.[0-9]+_-?[0-9]\.[0-9]+_[0-9]+_[0-9]+\.xyz$&#39;)
+    if not neb_traj_files:
+        raise FileNotFoundError(&#34;未找到符合模式 r&#39;^[0-9]+-[0-9]+_[0-9]\.[0-9]+_-?[0-9]\.[0-9]+_[0-9]+_[0-9]+\.xyz$&#39; 的 neb 优化轨迹文件&#34;)
+    
+    neb_traj_file = neb_traj_files[0]
+    print(f&#34;找到 neb 优化后的轨迹文件: {neb_traj_file}&#34;)
+    
+    # 获取CO2生成的序号
+    co2_indexes, _, _, c_idx, o_idx = parse_nebTraj_file_name(neb_traj_file)
+    
+    os.rename(neb_traj_file, &#34;original_neb_traj.xyz&#34;)
+    neb_traj_file = &#34;original_neb_traj.xyz&#34;
+
+
+    # 预处理：删除气体原子
+    cleaned_atoms, target_atom_list = pre_del_gases(
+        input_file=neb_traj_file,
+        old_indexes_to_transfer=[c_idx, o_idx]
+    )
+
+    write(&#34;cleaned_neb_traj.xyz&#34;, images=cleaned_atoms, format=&#34;extxyz&#34;)
+    print(f&#34;已保存去除气体原子后的结构到: cleaned_neb_traj.xyz&#34;)
+
+    # 预处理：删除反应中心附近一定范围内的吸附物
+    no_pre_ads_atoms, target_atom_list = pre_del_ads(
+        input_file=&#34;cleaned_neb_traj.xyz&#34;,
+        c_idx=target_atom_list[0],
+        o_idx=target_atom_list[1],
+        cutoff=6.0
+    )
+    
+    # 保存清理后的结构
+    write(&#34;preprocessed.xyz&#34;, images=no_pre_ads_atoms, format=&#34;extxyz&#34;)
+    print(f&#34;已保存去除预吸附的结构到: preprocessed.xyz&#34;)
+    print(f&#34;目标原子列表: {target_atom_list}&#34;)
+    
+    return no_pre_ads_atoms, target_atom_list, neb_traj_file, co2_indexes</code></pre>
+</details>
+<div class="desc"><p>对于计算没有其他吸附物存在时，在自动截取MD轨迹的算能垒的自动化流程中，查找并预处理输入文件
+包括查找neb优化轨迹文件，删除反应中心附近一定范围内的吸附物，保存清理后的结构轨迹文件，获取CO2生成的序号</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt>tuple:</dt>
+<dt><code>no_pre_ads_atoms</code></dt>
+<dd>清理反应中心附近吸附物后的结构原子对象</dd>
+<dt><code>target_atom_list</code></dt>
+<dd>目标原子列表</dd>
+<dt><code>neb_traj_file</code></dt>
+<dd>neb 优化轨迹文件路径</dd>
+<dt><code>co2_indexes</code></dt>
+<dd>CO2生成的序号列表</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.find_cluster_surface_hollow_sites"><code class="name flex">
 <span>def <span class="ident">find_cluster_surface_hollow_sites</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>max_triangle_side: float = 4.0,<br>cutoff: float = 3.5,<br>CN_threshold: int = 12) ‑> list</span>
 </code></dt>
@@ -1135,7 +2608,7 @@ output_file: 输出文件名</p></div>
 <p>hollowSites (list): 位于 PdAu 簇表面的Hollow位点三原子索引列表，每个元素为一个包含三个原子索引的元组</p></div>
 </dd>
 <dt id="dcg_sci_tool.find_elements_exclusively_frames"><code class="name flex">
-<span>def <span class="ident">find_elements_exclusively_frames</span></span>(<span>filename: str, allowed_elements={'O', 'Pd', 'C'})</span>
+<span>def <span class="ident">find_elements_exclusively_frames</span></span>(<span>filename: str, allowed_elements={'Pd', 'O', 'C'})</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -1210,27 +2683,28 @@ output_file: 输出文件名</p></div>
 </summary>
 <pre><code class="python">def find_matching_files(directory: str, pattern: str = None) -&gt; List[str]:
     &#34;&#34;&#34;
-    查找目录下所有满足正则表达式的文件名（不搜索子目录）
-    
-    参数:
-    ----------
-    directory : str
-        要搜索的目录路径
-    pattern : str, 可选
-        正则表达式模式，如果为None则使用默认模式
-        
-    返回:
-    -------
-    List[str]
-        匹配的文件名列表
+    查找目录下所有满足模式的文件名（不支持shell通配符，只支持正则表达式）
+    注意：正则表达式（regex）与shell的通配符（wildcard）语法完全不同！
+ 
+    Args:
+
+        directory (str): 要搜索的目录路径
+        pattern (str): 正则表达式
+
+    Returns:
+
+        matching_files (List[str]): 匹配的文件名列表
     &#34;&#34;&#34;
     if pattern is None:
-        # 您提供的正则表达式模式
         print(&#34;No pattern provided&#34;)
-        return []
-    
+        return []  
+
     # 编译正则表达式
-    regex = re.compile(pattern)
+    try:
+        regex = re.compile(pattern)
+    except re.error as e:
+        print(f&#34;正则表达式编译错误: {e}&#34;)
+        return []
     
     matching_files = []
     
@@ -1246,8 +2720,6 @@ output_file: 输出文件名</p></div>
             # 检查是否是文件（不是目录）
             if os.path.isfile(item_path):
                 # 检查文件名是否匹配正则表达式
-
-                # 只包含纯净的文件名，不包含路径
                 if regex.fullmatch(item):
                     matching_files.append(item)
     except FileNotFoundError:
@@ -1259,15 +2731,17 @@ output_file: 输出文件名</p></div>
     
     return matching_files</code></pre>
 </details>
-<div class="desc"><p>查找目录下所有满足正则表达式的文件名（不搜索子目录）</p>
-<h2 id="_1">参数:</h2>
-<p>directory : str
-要搜索的目录路径
-pattern : str, 可选
-正则表达式模式，如果为None则使用默认模式</p>
-<h2 id="_2">返回:</h2>
-<p>List[str]
-匹配的文件名列表</p></div>
+<div class="desc"><p>查找目录下所有满足模式的文件名（不支持shell通配符，只支持正则表达式）
+注意：正则表达式（regex）与shell的通配符（wildcard）语法完全不同！</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>directory</code></strong> :&ensp;<code>str</code></dt>
+<dd>要搜索的目录路径</dd>
+<dt><strong><code>pattern</code></strong> :&ensp;<code>str</code></dt>
+<dd>正则表达式</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>matching_files (List[str]): 匹配的文件名列表</p></div>
 </dd>
 <dt id="dcg_sci_tool.find_nearest_hollow_site"><code class="name flex">
 <span>def <span class="ident">find_nearest_hollow_site</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>c_index: int,<br>o_index: int) ‑> pyparsing.core.Dict</span>
@@ -1291,10 +2765,10 @@ pattern : str, 可选
         o_index (int): 目标O原子索引
 
     Returns:
+        tuple:
+            nearest_hollow_indexes (list): 最近的Hollow位点对应的金属原子序号列表（长度为3）
 
-        nearest_hollow_indexes (list): 最近的Hollow位点对应的金属原子序号列表（长度为3）
-
-        nearby_hollow_sites_count (int): C-O中点附近合理的Hollow位点数量
+            nearby_hollow_sites_count (int): C-O中点附近合理的Hollow位点数量
 
     &#34;&#34;&#34;
     max_triangle_side = 4.0  # 定义三角形边长的最大值，单位为Å
@@ -1306,7 +2780,7 @@ pattern : str, 可选
     
     # 获取原子信息
     positions = particles.positions[...]
-    types = data.particles.particle_types[...]
+    types = particles.particle_types[...]
 
     symbols = np.array([type_names_order[t-1] for t in types])
     num_atoms = particles.count
@@ -1392,8 +2866,194 @@ pattern : str, 可选
 <dd>目标O原子索引</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<p>nearest_hollow_indexes (list): 最近的Hollow位点对应的金属原子序号列表（长度为3）</p>
-<p>nearby_hollow_sites_count (int): C-O中点附近合理的Hollow位点数量</p></div>
+<p>tuple:
+nearest_hollow_indexes (list): 最近的Hollow位点对应的金属原子序号列表（长度为3）</p>
+<pre><code>nearby_hollow_sites_count (int): C-O中点附近合理的Hollow位点数量
+</code></pre></div>
+</dd>
+<dt id="dcg_sci_tool.float_to_viridis_rgb"><code class="name flex">
+<span>def <span class="ident">float_to_viridis_rgb</span></span>(<span>float_array: List[float] | numpy.ndarray,<br>vmin: float | None = None,<br>vmax: float | None = None,<br>max_color: Tuple[float, float, float] | None = None) ‑> List[Tuple[int, int, int]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def float_to_viridis_rgb(float_array: Union[List[float], np.ndarray],
+                                        vmin: Optional[float] = None,
+                                        vmax: Optional[float] = None,
+                                        max_color: Optional[Tuple[float, float, float]] = None
+                                        ) -&gt; List[Tuple[int, int, int]]:
+    &#34;&#34;&#34;
+    将浮点数数组映射到Viridis色阶的RGB颜色列表，使用接近matplotlib Viridis的色阶
+
+    Args:
+        float_array: 输入的浮点数数组，可以是列表或numpy数组
+        vmin: 可选的最小值，用于归一化。如果为None，将使用输入数组的最小值。
+        vmax: 可选的最大值，用于归一化。如果为None，将使用输入数组的最大值。
+        max_color: 可选的最大颜色值，用于超出范围时的颜色。如果为None，将使用黄色。
+
+    &#34;&#34;&#34;
+    arr = np.array(float_array, dtype=float)
+    
+    if vmin is None:
+        vmin = arr.min()
+    if vmax is None:
+        vmax = arr.max()
+
+    if vmax == vmin:
+        vmax = vmin + 1
+    
+    normalized = (arr - vmin) / (vmax - vmin)
+
+    if max_color is None:
+        # 将值限制在0到1之间，当输入值超出范围时，使用边界颜色
+        normalized = np.clip(normalized, 0.0, 1.0)
+    
+    # Viridis色阶的预定义控制点（来自matplotlib）
+    viridis_data = np.array([
+        [0.267004, 0.004874, 0.329415],  # 深紫色
+        [0.275191, 0.194905, 0.496005],  # 紫色
+        [0.212395, 0.359683, 0.551710],  # 蓝紫色
+        [0.153364, 0.497000, 0.557724],  # 蓝色
+        [0.122312, 0.633153, 0.530398],  # 青蓝色
+        [0.288921, 0.758397, 0.428397],  # 蓝绿色
+        [0.626579, 0.854645, 0.223353],  # 绿色
+        [0.993248, 0.906157, 0.143936]   # 黄色
+    ])
+    
+    rgb_colors = []
+    
+    for t in normalized:
+        if t &lt;= 1.0:
+            # 将t映射到控制点索引
+            idx = t * (len(viridis_data) - 1)
+            idx_floor = int(np.floor(idx))
+            idx_ceil = int(np.ceil(idx))
+
+            if idx_floor == idx_ceil:
+                # 正好在控制点上
+                r, g, b = viridis_data[idx_floor]
+            else:
+                # 线性插值
+                weight = idx - idx_floor
+                r = viridis_data[idx_floor, 0] * (1 - weight) + viridis_data[idx_ceil, 0] * weight
+                g = viridis_data[idx_floor, 1] * (1 - weight) + viridis_data[idx_ceil, 1] * weight
+                b = viridis_data[idx_floor, 2] * (1 - weight) + viridis_data[idx_ceil, 2] * weight
+        else:
+            r, g, b = max_color[0], max_color[1], max_color[2]  # 超出范围时使用最后一个颜色（黄色）
+            
+        rgb_colors.append((r, g, b))
+    
+    return rgb_colors</code></pre>
+</details>
+<div class="desc"><p>将浮点数数组映射到Viridis色阶的RGB颜色列表，使用接近matplotlib Viridis的色阶</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>float_array</code></strong></dt>
+<dd>输入的浮点数数组，可以是列表或numpy数组</dd>
+<dt><strong><code>vmin</code></strong></dt>
+<dd>可选的最小值，用于归一化。如果为None，将使用输入数组的最小值。</dd>
+<dt><strong><code>vmax</code></strong></dt>
+<dd>可选的最大值，用于归一化。如果为None，将使用输入数组的最大值。</dd>
+<dt><strong><code>max_color</code></strong></dt>
+<dd>可选的最大颜色值，用于超出范围时的颜色。如果为None，将使用黄色。</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.getEachfromXYZ"><code class="name flex">
+<span>def <span class="ident">getEachfromXYZ</span></span>(<span>input_file: str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def getEachfromXYZ(input_file: str):
+    &#34;&#34;&#34;
+    从XYZ文件中提取每个帧的结构数据，并生成可用来跑each模式的neb的对应的data文件
+    
+    Args:
+        input_file (str): 输入文件路径，包含XYZ格式的轨迹数据
+    &#34;&#34;&#34;
+
+    
+    # 拆分.XYZ轨迹：第一帧和其他帧
+    IS_traj = read(input_file, index=&#34;0&#34;)
+    neb_images_besides_IS = read(input_file, index=&#34;1:&#34;)
+    
+    # 产生IS.data文件
+    write(&#34;IS_temp.xyz&#34;,format=&#34;extxyz&#34;,images=IS_traj)  
+    traj2iniData(traj_file = &#34;IS_temp.xyz&#34;, specorder=[&#34;C&#34;, &#34;O&#34;, &#34;Pd&#34;, &#34;Au&#34;])
+    # 重命名文件
+    if os.path.exists(&#34;0.data&#34;):
+        os.rename(&#34;0.data&#34;, &#34;IS.data&#34;)
+    
+    # 产生其他帧的data文件
+    for i, atoms in enumerate(neb_images_besides_IS):
+        print(i+1)
+        atoms2lmps_resultData(atoms, f&#34;each_{i+1}.data&#34;)</code></pre>
+</details>
+<div class="desc"><p>从XYZ文件中提取每个帧的结构数据，并生成可用来跑each模式的neb的对应的data文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入文件路径，包含XYZ格式的轨迹数据</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.get_Ea_dH_from_file"><code class="name flex">
+<span>def <span class="ident">get_Ea_dH_from_file</span></span>(<span>filename='neb_mep.dat')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_Ea_dH_from_file(filename = &#34;neb_mep.dat&#34;):
+    &#34;&#34;&#34;
+    通过读取neb_mep.dat文件，获取能垒和焓变数值
+
+    Args:
+        filename (str): neb_mep.dat文件地址，默认值为&#34;neb_mep.dat&#34;
+
+    Returns:
+        tuple: 能垒和焓变元组
+
+            Ea: 能垒数值
+
+            dH: 焓变数值
+    &#34;&#34;&#34;
+    
+    try:
+        data = np.loadtxt(filename)
+        if len(data.shape) &gt; 1 and data.shape[1] &gt;= 4:  # 确保有4列
+            col4 = data[:, 3]  # 第4列（索引3）
+            Ea = np.max(col4)  # 最大值
+            dH = col4[-1]      # 最后一个值
+            print(f&#34;Ea (最大值): {Ea}&#34;)
+            print(f&#34;dH (最后值): {dH}&#34;)
+        else:
+            print(&#34;错误: 文件列数不足4列&#34;)
+    except FileNotFoundError:
+        print(f&#34;错误: 文件 &#39;{filename}&#39; 不存在&#34;)
+    except Exception as e:
+        print(f&#34;读取错误: {e}&#34;)
+    return Ea, dH</code></pre>
+</details>
+<div class="desc"><p>通过读取neb_mep.dat文件，获取能垒和焓变数值</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>neb_mep.dat文件地址，默认值为"neb_mep.dat"</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>能垒和焓变元组</p>
+<p>Ea: 能垒数值</p>
+<p>dH: 焓变数值</p>
+</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.get_OC_bonded_metal_atoms"><code class="name flex">
 <span>def <span class="ident">get_OC_bonded_metal_atoms</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>c_index: int,<br>o_index: int) ‑> List[int]</span>
@@ -1405,7 +3065,8 @@ pattern : str, 可选
 </summary>
 <pre><code class="python">def get_OC_bonded_metal_atoms(data: DataCollection, type_names_order: list, c_index: int, o_index: int  
                           ) -&gt; List[int]:
-    &#34;&#34;&#34;获取与目标C和目标O原子成键的金属原子序号列表
+    &#34;&#34;&#34;
+    获取与目标C和目标O原子成键的金属原子序号列表
     Args:
         data (DataCollection): 结构的ovito数据集合
         
@@ -1419,9 +3080,9 @@ pattern : str, 可选
     &#34;&#34;&#34;
     bond_cutoffs = {
     &#39;Au-C&#39;: 2.5,
-    &#39;Au-O&#39;: 2.2,
+    &#39;Au-O&#39;: 2.5,
     &#39;Pd-C&#39;: 2.5,
-    &#39;Pd-O&#39;: 2.1
+    &#39;Pd-O&#39;: 2.5
 }
     particles = data.particles
     
@@ -1534,6 +3195,145 @@ pattern : str, 可选
 <h2 id="returns">Returns</h2>
 <p>atoms_within_cutoff (list): 在截断距离内的原子序号列表</p></div>
 </dd>
+<dt id="dcg_sci_tool.get_atoms_with_specific_color"><code class="name flex">
+<span>def <span class="ident">get_atoms_with_specific_color</span></span>(<span>xyz_file: str, target_color=[0.0, 1.0, 1.0])</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_atoms_with_specific_color(xyz_file: str, target_color=[0.0, 1.0, 1.0]):
+    &#34;&#34;&#34;
+    从.xyz文件中找到color属性为特定值的原子序号
+    
+    Args:
+
+        xyz_file (str): 输入的.xyz文件路径
+
+        target_color (list): 目标颜色值，默认[0.0, 1.0, 1.0]
+    
+    Returns:
+
+        list: 颜色为target_color的原子序号列表
+        
+    &#34;&#34;&#34;
+
+    # 1. 获取color属性所在的列序号
+    color_columns = get_xyz_prop_columns(xyz_file, &#34;color&#34;)
+    
+    if not color_columns:
+        raise ValueError(f&#34;在文件 {xyz_file} 中未找到color属性&#34;)
+    
+    print(f&#34;color属性在原子行中的列序号: {color_columns}&#34;)
+    
+    # 检查color属性是否是3维向量（RGB颜色）
+    if len(color_columns) != 3:
+        raise ValueError(f&#34;color属性的维度不是3，实际维度: {len(color_columns)}&#34;)
+    
+    # 2. 读取文件并查找匹配颜色的原子
+    matching_atoms = []
+    
+    with open(xyz_file, &#39;r&#39;, encoding=&#39;utf-8&#39;) as f:
+        # 读取第一行：原子数
+        first_line = f.readline().strip()
+        if not first_line:
+            return matching_atoms
+        
+        n_atoms = int(first_line)
+        
+        # 跳过注释行
+        f.readline()
+        
+        # 读取每个原子行
+        for atom_idx in range(n_atoms):
+            line = f.readline()
+            if not line:
+                break
+            
+            parts = line.strip().split()
+            if len(parts) &lt;= max(color_columns):
+                continue
+            
+            # 提取color属性的三个分量
+            try:
+                r = float(parts[color_columns[0]])
+                g = float(parts[color_columns[1]])
+                b = float(parts[color_columns[2]])
+                
+                # 检查是否匹配目标颜色
+                if (abs(r - target_color[0]) &lt; 1e-6 and
+                    abs(g - target_color[1]) &lt; 1e-6 and
+                    abs(b - target_color[2]) &lt; 1e-6):
+                    matching_atoms.append(atom_idx)
+                    
+            except (ValueError, IndexError) as e:
+                print(f&#34;警告: 解析原子 {atom_idx} 的color属性时出错: {e}&#34;)
+                continue
+    
+    print(f&#34;找到 {len(matching_atoms)} 个颜色为 {target_color} 的原子&#34;)
+    return matching_atoms</code></pre>
+</details>
+<div class="desc"><p>从.xyz文件中找到color属性为特定值的原子序号</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>xyz_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入的.xyz文件路径</dd>
+<dt><strong><code>target_color</code></strong> :&ensp;<code>list</code></dt>
+<dd>目标颜色值，默认[0.0, 1.0, 1.0]</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list</code></dt>
+<dd>颜色为target_color的原子序号列表</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.get_detailed_MD_traj"><code class="name flex">
+<span>def <span class="ident">get_detailed_MD_traj</span></span>(<span>frame_index_in_4w: int, atom_indexes: list)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_detailed_MD_traj(frame_index_in_4w: int, atom_indexes: list):
+    &#34;&#34;&#34;
+    从MD轨迹文件中提取详细信息，包括指定原子的轨迹文件, 并生成指定原子上色后的轨迹文件
+    Args:
+        frame_index_in_4w (int): 在合并的dump_locate.xyz轨迹中的帧索引，在0-39999之间
+        atom_indexes (list): 要上色的原子索引列表
+    &#34;&#34;&#34;
+    len_dump_locate_xyz= 400
+    part_index = int(frame_index_in_4w/len_dump_locate_xyz) + 1
+    frame_index = (frame_index_in_4w % len_dump_locate_xyz) * 50
+    start_frame = frame_index - 250
+    if start_frame &lt; 0: start_frame = 0
+    end_frame = frame_index + 250
+    if end_frame &gt; 39999: end_frame = 39999
+    if os.path.exists(&#34;dump.xyz&#34;): os.remove(&#34;dump.xyz&#34;)
+    with tarfile.open(f&#34;dump{part_index}.xyz.tgz&#34;, &#34;r:gz&#34;) as tar: tar.extractall()
+    fast_extract_frames(f&#34;dump.xyz&#34;, 
+                        f&#34;dump{start_frame}-{end_frame}.xyz&#34;, 
+                        start_frame, 
+                        end_frame)
+
+    color_atoms_in_trajectory(f&#34;dump{start_frame}-{end_frame}.xyz&#34;, 
+                              [0.0, 1.0, 1.0], 
+                              atom_indexes, 
+                              output_file=f&#34;dump{start_frame}-{end_frame}_colored.xyz&#34;)
+    os.remove(f&#34;dump{start_frame}-{end_frame}.xyz&#34;)
+    os.remove(&#34;dump.xyz&#34;)
+    print(f&#34;已生成 {f&#39;dump{start_frame}-{end_frame}_colored.xyz&#39;} 文件&#34;)    </code></pre>
+</details>
+<div class="desc"><p>从MD轨迹文件中提取详细信息，包括指定原子的轨迹文件, 并生成指定原子上色后的轨迹文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>frame_index_in_4w</code></strong> :&ensp;<code>int</code></dt>
+<dd>在合并的dump_locate.xyz轨迹中的帧索引，在0-39999之间</dd>
+<dt><strong><code>atom_indexes</code></strong> :&ensp;<code>list</code></dt>
+<dd>要上色的原子索引列表</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.get_hollowSite_Au_Disperation"><code class="name flex">
 <span>def <span class="ident">get_hollowSite_Au_Disperation</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: List[str],<br>hollowSite_atom_indexes: List[int]) ‑> Tuple[float, Dict]</span>
 </code></dt>
@@ -1547,15 +3347,15 @@ pattern : str, 可选
                                 hollowSite_atom_indexes: List[int], 
                                ) -&gt; Tuple[float, Dict]:
     &#34;&#34;&#34;
-    计算Hollow位点外圈Au原子的离散值
+    计算Hollow位点表层外圈Au原子的分散度
     
     Args:
         data: OVITO 数据对象
-        type_names_order: 原子类型名称顺序列表
-        hollowSite_atom_indexes: Hollow位点三个原子的索引列表
+        type_names_order (list of str): 原子类型名称顺序列表
+        hollowSite_atom_indexes (list of int): Hollow位点三个原子的索引列表
     
     Returns:
-        tuple: (disperation_value, 原子统计信息)
+        disperation_value (float): 分散度
     &#34;&#34;&#34;
     # 导入数据
     particles = data.particles
@@ -1591,18 +3391,11 @@ pattern : str, 可选
         elif symbols[idx] == &#39;Pd&#39;:
             outer_pd_count += 1
     
-    print(f&#34;  外圈总原子数: {len(outer_atom_indices)}, 其中Au原子数: {len(au_outer_indices)}&#34;)
+    # print(f&#34;  外圈总原子数: {len(outer_atom_indices)}, 其中Au原子数: {len(au_outer_indices)}&#34;)
     
     if len(au_outer_indices) == 0:
         print(&#34;  警告: 外圈中没有找到Au原子，离散值设为1.0&#34;)
-        return 1.0, {
-            &#39;inner_total&#39;: len(hollowSite_atom_indexes),
-            &#39;inner_au_count&#39;: inner_au_count,
-            &#39;inner_pd_count&#39;: inner_pd_count,
-            &#39;outer_total&#39;: len(outer_atom_indices),
-            &#39;outer_au_count&#39;: outer_au_count,
-            &#39;outer_pd_count&#39;: outer_pd_count
-        }
+        return 1.0
     
     # 构建从中心点到每个外圈Au原子的向量
     vectors = []
@@ -1631,33 +3424,23 @@ pattern : str, 可选
     # 计算离散值: 1 - |A|
     disperation_value = 1 - magnitude_A
     
-    print(f&#34;  向量A的模: {magnitude_A:.6f}&#34;)
-    print(f&#34;  离散值 (1 - |A|): {disperation_value:.6f}&#34;)
+    # print(f&#34;  向量A的模: {magnitude_A:.6f}&#34;)
+    # print(f&#34;  离散值 (1 - |A|): {disperation_value:.6f}&#34;)
     
-    return disperation_value, {
-        &#39;inner_total&#39;: len(hollowSite_atom_indexes),
-        &#39;inner_au_count&#39;: inner_au_count,
-        &#39;inner_pd_count&#39;: inner_pd_count,
-        &#39;outer_total&#39;: len(outer_atom_indices),
-        &#39;outer_au_count&#39;: outer_au_count,
-        &#39;outer_pd_count&#39;: outer_pd_count
-    }</code></pre>
+    return disperation_value</code></pre>
 </details>
-<div class="desc"><p>计算Hollow位点外圈Au原子的离散值</p>
+<div class="desc"><p>计算Hollow位点表层外圈Au原子的分散度</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>data</code></strong></dt>
 <dd>OVITO 数据对象</dd>
-<dt><strong><code>type_names_order</code></strong></dt>
+<dt><strong><code>type_names_order</code></strong> :&ensp;<code>list</code> of <code>str</code></dt>
 <dd>原子类型名称顺序列表</dd>
-<dt><strong><code>hollowSite_atom_indexes</code></strong></dt>
+<dt><strong><code>hollowSite_atom_indexes</code></strong> :&ensp;<code>list</code> of <code>int</code></dt>
 <dd>Hollow位点三个原子的索引列表</dd>
 </dl>
 <h2 id="returns">Returns</h2>
-<dl>
-<dt><code>tuple</code></dt>
-<dd>(disperation_value, 原子统计信息)</dd>
-</dl></div>
+<p>disperation_value (float): 分散度</p></div>
 </dd>
 <dt id="dcg_sci_tool.get_hollowSite_outer_neighbors_with_subsurface"><code class="name flex">
 <span>def <span class="ident">get_hollowSite_outer_neighbors_with_subsurface</span></span>(<span>data: ovito.data.DataCollection,<br>type_names_order: list,<br>hollow_site_atom_indexes: list) ‑> List[int]</span>
@@ -1803,24 +3586,75 @@ pattern : str, 可选
 <h2 id="returns">Returns</h2>
 <p>surface_neighbors (list): hollow位点外围表面邻居原子索引列表</p></div>
 </dd>
-<dt id="dcg_sci_tool.get_local_minima_sides_of_peak"><code class="name flex">
-<span>def <span class="ident">get_local_minima_sides_of_peak</span></span>(<span>)</span>
+<dt id="dcg_sci_tool.get_indexes_symbols"><code class="name flex">
+<span>def <span class="ident">get_indexes_symbols</span></span>(<span>input_file, indexes)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_local_minima_sides_of_peak():
+<pre><code class="python">def get_indexes_symbols(input_file,indexes):
     &#34;&#34;&#34;
-    读取跑lmps-neb获得的neb_mep.dat文件，找到处于能量峰值两侧的局部最小值对应的序号，
-    如果没有，则输出端点序号（0或最大序号），并根据序号和result.xyz，
+    获取指定索引的原子符号列表
+    Args:
+        input_file (str): 输入文件路径
+        indexes (list): 原子索引列表
+    Returns:
+        symbols (list): 原子符号列表
+    &#34;&#34;&#34;
+    pipeline = import_file(input_file)
+    data = pipeline.compute(0)
+    type_names_order = extract_atom_types(input_file)
+    particle_types = data.particles.particle_types[...]
+    symbols = [type_names_order[pt - 1] for pt in particle_types[indexes]]
+    return symbols</code></pre>
+</details>
+<div class="desc"><p>获取指定索引的原子符号列表</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>输入文件路径</dd>
+<dt><strong><code>indexes</code></strong> :&ensp;<code>list</code></dt>
+<dd>原子索引列表</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>symbols (list): 原子符号列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_local_minima_sides_of_peak"><code class="name flex">
+<span>def <span class="ident">get_local_minima_sides_of_peak</span></span>(<span>mep_data_file='neb_mep.dat', neb_traj_file='result.xyz')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_local_minima_sides_of_peak(mep_data_file = &#34;neb_mep.dat&#34;, neb_traj_file = &#34;result.xyz&#34;):
+    &#34;&#34;&#34;
+    读取跑lmps-neb获得的MEP文件，找到处于能量峰值两侧的局部最小值对应的序号，
+    如果没有，则输出端点序号（0或最大序号），并根据序号和优化后的neb轨迹，
     输出相应的.xyz文件:mid_IS.xyz和mid_FS.xyz。
+
+    Args:
+        mep_data_file (str): MEP文件数据文件名（默认&#34;neb_mep.dat&#34;）
+
+        neb_traj_file (str): 优化后的neb轨迹文件名（默认&#34;result.xyz&#34;）
+
+    Returns:
+        tuple: 是否找到中间态以及峰值左右两侧的局部最低点或端点的序号
+
+        found_local_minima (bool): 是否找到中间态
+
+        result_indices[0] (int)：左侧构象序号
+        
+        result_indices[1] (int)：右侧构象序号
+
+
     &#34;&#34;&#34;
 
     # 读取文件第四列数据
     fourth_column = []
-    with open(&#39;neb_mep.dat&#39;, &#39;r&#39;) as file:
+    with open(mep_data_file, &#39;r&#39;) as file:
         for line in file:
             line = line.strip()
             if line and not line.startswith(&#39;#&#39;):  # 跳过空行和注释行
@@ -1862,16 +3696,33 @@ pattern : str, 可选
     
     # 按从小到大的顺序输出
     result_indices.sort()
+    found_local_minima = False
     # print(f&#34;{result_indices[0]} {result_indices[1]}&#34;)
     if result_indices[0] != 0 or result_indices[1] != len(fourth_column) - 1:
-        structs=read(&#39;result.xyz&#39;,&#39;:&#39;)
+        found_local_minima = True
+        structs=read(neb_traj_file,&#39;:&#39;)
         write(&#39;mid_IS.xyz&#39;,structs[result_indices[0]])
         write(&#39;mid_FS.xyz&#39;,structs[result_indices[1]])
-    return result_indices[0],result_indices[1]</code></pre>
+    return found_local_minima, result_indices[0],result_indices[1]</code></pre>
 </details>
-<div class="desc"><p>读取跑lmps-neb获得的neb_mep.dat文件，找到处于能量峰值两侧的局部最小值对应的序号，
-如果没有，则输出端点序号（0或最大序号），并根据序号和result.xyz，
-输出相应的.xyz文件:mid_IS.xyz和mid_FS.xyz。</p></div>
+<div class="desc"><p>读取跑lmps-neb获得的MEP文件，找到处于能量峰值两侧的局部最小值对应的序号，
+如果没有，则输出端点序号（0或最大序号），并根据序号和优化后的neb轨迹，
+输出相应的.xyz文件:mid_IS.xyz和mid_FS.xyz。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>mep_data_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>MEP文件数据文件名（默认"neb_mep.dat"）</dd>
+<dt><strong><code>neb_traj_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>优化后的neb轨迹文件名（默认"result.xyz"）</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>是否找到中间态以及峰值左右两侧的局部最低点或端点的序号</dd>
+</dl>
+<p>found_local_minima (bool): 是否找到中间态</p>
+<p>result_indices[0] (int)：左侧构象序号</p>
+<p>result_indices[1] (int)：右侧构象序号</p></div>
 </dd>
 <dt id="dcg_sci_tool.get_pdau_cluster_center"><code class="name flex">
 <span>def <span class="ident">get_pdau_cluster_center</span></span>(<span>data: ovito.data.DataCollection, type_names_order: list)</span>
@@ -2031,14 +3882,14 @@ pattern : str, 可选
 <p>surface_atoms (list): 位于 PdAu 簇表面的原子索引列表</p></div>
 </dd>
 <dt id="dcg_sci_tool.get_reactants_ad_config"><code class="name flex">
-<span>def <span class="ident">get_reactants_ad_config</span></span>(<span>input_file,<br>c_index,<br>o_index,<br>c_pd_cutoff=2.5,<br>o_pd_cutoff=2.1,<br>c_au_cutoff=2.5,<br>o_au_cutoff=2.2)</span>
+<span>def <span class="ident">get_reactants_ad_config</span></span>(<span>input_file,<br>c_index,<br>o_index,<br>c_pd_cutoff=2.5,<br>o_pd_cutoff=2.5,<br>c_au_cutoff=2.5,<br>o_au_cutoff=2.5)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_reactants_ad_config(input_file, c_index, o_index, c_pd_cutoff = 2.5, o_pd_cutoff = 2.1, c_au_cutoff = 2.5, o_au_cutoff = 2.2):
+<pre><code class="python">def get_reactants_ad_config(input_file, c_index, o_index, c_pd_cutoff = 2.5, o_pd_cutoff = 2.5, c_au_cutoff = 2.5, o_au_cutoff = 2.5):
     &#34;&#34;&#34;
     Get the adsorption configuration of reactant atoms.
 
@@ -2051,11 +3902,11 @@ pattern : str, 可选
         
         c_pd_cutoff (float): Cutoff distance for C atom coordination with Pd, default is 2.5 Å
         
-        o_pd_cutoff (float): Cutoff distance for O atom coordination with Pd, default is 2.1 Å
+        o_pd_cutoff (float): Cutoff distance for O atom coordination with Pd, default is 2.5 Å
 
         c_au_cutoff (float): Cutoff distance for C atom coordination with Au, default is 2.5 Å
 
-        o_au_cutoff (float): Cutoff distance for O atom coordination with Au, default is 2.2 Å
+        o_au_cutoff (float): Cutoff distance for O atom coordination with Au, default is 2.5 Å
 
     Returns:
 
@@ -2181,11 +4032,11 @@ pattern : str, 可选
 <dt><strong><code>c_pd_cutoff</code></strong> :&ensp;<code>float</code></dt>
 <dd>Cutoff distance for C atom coordination with Pd, default is 2.5 Å</dd>
 <dt><strong><code>o_pd_cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>Cutoff distance for O atom coordination with Pd, default is 2.1 Å</dd>
+<dd>Cutoff distance for O atom coordination with Pd, default is 2.5 Å</dd>
 <dt><strong><code>c_au_cutoff</code></strong> :&ensp;<code>float</code></dt>
 <dd>Cutoff distance for C atom coordination with Au, default is 2.5 Å</dd>
 <dt><strong><code>o_au_cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>Cutoff distance for O atom coordination with Au, default is 2.2 Å</dd>
+<dd>Cutoff distance for O atom coordination with Au, default is 2.5 Å</dd>
 </dl>
 <h2 id="returns">Returns</h2>
 <dl>
@@ -2301,6 +4152,98 @@ pattern : str, 可选
 <h2 id="returns">Returns</h2>
 <p>final_atom_list (list): 满足条件的原子索引列表</p></div>
 </dd>
+<dt id="dcg_sci_tool.get_reaction_site_infos"><code class="name flex">
+<span>def <span class="ident">get_reaction_site_infos</span></span>(<span>input_file)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_reaction_site_infos(input_file):
+
+    &#34;&#34;&#34;
+    获取反应中心的结构信息
+    Args:
+        input_file (Path): 输入文件路径
+    Returns:
+        tuple: 包含反应中心结构信息的元组
+
+        N_hollow_sites (int): 反应中心的原子数
+
+        N_hollow_sites_Au_atoms (int): 反应中心的Au原子数
+
+        N_surface_neighbors (int): 反应中心外圈的表面原子数
+
+        N_surface_Au_neighbors (int): 反应中心外圈的表面Au原子数
+
+        N_subsurface_neighbors (int): 反应中心的次表面原子数
+
+        N_subsurface_Au_neighbors (int): 反应中心的次表面Au原子数
+
+        Au_Disperation (float): 反应中心外圈表层Au原子的分散度
+        
+        Ea (float): 能垒
+    &#34;&#34;&#34;
+    # script_dir = Path(__file__).resolve().parent
+    co2_indexes, Ea, dE, C_idx, O_idx = parse_nebTraj_file_name(input_file)
+    # pipeline = import_file(f&#39;{script_dir}/{input_file}&#39;)
+    pipeline = import_file(input_file)
+    data = pipeline.compute(0)
+    # type_names_order = extract_atom_types(f&#39;{script_dir}/{input_file}&#39;)
+    type_names_order = extract_atom_types(input_file)
+
+    nearest_hollow_indexes, nearby_hollow_sites_count = find_nearest_hollow_site(data=data, type_names_order=type_names_order, c_index=C_idx, o_index=O_idx)
+    hollowSite_outer_surface_neighbors = get_hollowSite_outer_surface_neighbors(data, type_names_order, nearest_hollow_indexes)
+    hollowSite_subsurface_neighbors = get_hollowSite_subsurface_neighbors(data, type_names_order, nearest_hollow_indexes)
+
+    # symbols_hollow_sites = get_indexes_symbols(f&#39;{script_dir}/{input_file}&#39;,nearest_hollow_indexes)
+    symbols_hollow_sites = get_indexes_symbols(input_file, nearest_hollow_indexes)
+    N_hollow_sites = len(symbols_hollow_sites)
+    N_hollow_sites_Au_atoms = symbols_hollow_sites.count(&#39;Au&#39;)
+
+    # symbols_outer_surface = get_indexes_symbols(f&#39;{script_dir}/{input_file}&#39;,hollowSite_outer_surface_neighbors)
+    symbols_outer_surface = get_indexes_symbols(input_file,hollowSite_outer_surface_neighbors)
+    N_surface_neighbors = len(symbols_outer_surface)
+    N_surface_neighbors = len(symbols_outer_surface)
+    N_surface_Au_neighbors = symbols_outer_surface.count(&#39;Au&#39;)
+
+    # symbols_subsurface = get_indexes_symbols(f&#39;{script_dir}/{input_file}&#39;,hollowSite_subsurface_neighbors)
+    symbols_subsurface = get_indexes_symbols(input_file,hollowSite_subsurface_neighbors)
+    N_subsurface_neighbors = len(symbols_subsurface)
+    N_subsurface_Au_neighbors = symbols_subsurface.count(&#39;Au&#39;)
+
+    Au_Disperation = float(get_hollowSite_Au_Disperation(data, type_names_order, nearest_hollow_indexes))
+
+    return N_hollow_sites, \
+        N_hollow_sites_Au_atoms, \
+            N_surface_neighbors, \
+                N_surface_Au_neighbors, \
+                    N_subsurface_neighbors, \
+                        N_subsurface_Au_neighbors, \
+                            Au_Disperation, \
+                                Ea</code></pre>
+</details>
+<div class="desc"><p>获取反应中心的结构信息</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>Path</code></dt>
+<dd>输入文件路径</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>包含反应中心结构信息的元组</dd>
+</dl>
+<p>N_hollow_sites (int): 反应中心的原子数</p>
+<p>N_hollow_sites_Au_atoms (int): 反应中心的Au原子数</p>
+<p>N_surface_neighbors (int): 反应中心外圈的表面原子数</p>
+<p>N_surface_Au_neighbors (int): 反应中心外圈的表面Au原子数</p>
+<p>N_subsurface_neighbors (int): 反应中心的次表面原子数</p>
+<p>N_subsurface_Au_neighbors (int): 反应中心的次表面Au原子数</p>
+<p>Au_Disperation (float): 反应中心外圈表层Au原子的分散度</p>
+<p>Ea (float): 能垒</p></div>
+</dd>
 <dt id="dcg_sci_tool.get_struct_focusing_reaction_site"><code class="name flex">
 <span>def <span class="ident">get_struct_focusing_reaction_site</span></span>(<span>data, type_names_order, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None)</span>
 </code></dt>
@@ -2387,15 +4330,110 @@ new_cell : np.ndarray 或 list/tuple
 rotated_translated_struct : Atoms
 旋转并平移后的ASE Atoms对象</p></div>
 </dd>
-<dt id="dcg_sci_tool.get_traj_focusing_reaction_site"><code class="name flex">
-<span>def <span class="ident">get_traj_focusing_reaction_site</span></span>(<span>traj_file, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None)</span>
+<dt id="dcg_sci_tool.get_target_atoms_from_MD"><code class="name flex">
+<span>def <span class="ident">get_target_atoms_from_MD</span></span>(<span>input_file: str)</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_traj_focusing_reaction_site(traj_file, c_index, o_index, cutoff=6.0, target_vector=None, new_cell=None):
+<pre><code class="python">def get_target_atoms_from_MD(input_file: str):
+    &#34;&#34;&#34;
+
+    根据MD中截取的反应初态，找到兰色的原子序号，并输出要耦合的C和O原子的序号
+
+    Args:
+
+        input_file (str): MD中截取反应的轨迹地址
+
+    Returns:
+
+        target_atoms (list): 目标原子（要耦合的C和O原子）的序号列表
+
+    &#34;&#34;&#34;
+    blue_atom_list = get_atoms_with_specific_color(f&#34;{input_file}&#34;)
+    atoms = read(f&#34;{input_file}&#34;, index = 0)
+    bonded_c_o = get_bonded_co_pairs(blue_atom_list, atoms)
+    target_atoms = []
+    target_atoms.append(bonded_c_o[0])
+
+    for i in blue_atom_list:
+        if i not in bonded_c_o:
+            target_atoms.append(i)
+            break
+    print(f&#34;兰色原子序号列表：{target_atoms}&#34;)
+    return target_atoms</code></pre>
+</details>
+<div class="desc"><p>根据MD中截取的反应初态，找到兰色的原子序号，并输出要耦合的C和O原子的序号</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>MD中截取反应的轨迹地址</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>target_atoms (list): 目标原子（要耦合的C和O原子）的序号列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_target_atoms_from_file"><code class="name flex">
+<span>def <span class="ident">get_target_atoms_from_file</span></span>(<span>filename='python.log')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_target_atoms_from_file(filename=&#34;python.log&#34;):
+    &#34;&#34;&#34;
+    通过读取python.log日志文件中获得目标原子列表
+    
+    Args:
+        filename (str): 日志文件名，默认 &#34;python.log&#34;
+        
+    Returns:
+        atom_list (list): 包含所有提取到的原子列表的列表
+    &#34;&#34;&#34;
+    atom_list = []
+    
+    try:
+        with open(filename, &#39;r&#39;, encoding=&#39;utf-8&#39;) as file:
+            for line in file:
+                # 匹配格式: 目标原子列表: [52, 100] 或类似格式
+                match = re.search(r&#39;目标原子列表:\s*(\[[^\]]+\])&#39;, line)
+                if match:
+                    list_str = match.group(1)
+                    
+                    # 使用json（如果格式严格是JSON格式）
+                    try:
+                        # 将字符串形式的数组&#34;[a,b,...]&#34;转化为真的数组
+                        atom_list = json.loads(list_str) 
+
+                    except json.JSONDecodeError:
+                        pass
+    except FileNotFoundError:
+        print(f&#34;错误: 文件 &#39;{filename}&#39; 不存在&#34;)
+    except Exception as e:
+        print(f&#34;读取文件时发生错误: {e}&#34;)
+    
+    return atom_list</code></pre>
+</details>
+<div class="desc"><p>通过读取python.log日志文件中获得目标原子列表</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
+<dd>日志文件名，默认 "python.log"</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>atom_list (list): 包含所有提取到的原子列表的列表</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_traj_focusing_reaction_site"><code class="name flex">
+<span>def <span class="ident">get_traj_focusing_reaction_site</span></span>(<span>traj_file, c_index, o_index, cutoff=8.0, target_vector=None, new_cell=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_traj_focusing_reaction_site(traj_file, c_index, o_index, cutoff=8.0, target_vector=None, new_cell=None):
    &#34;&#34;&#34;
    输入原始MD-neb结构文件，输出经过处理后的结构文件，将反应局部结构聚焦到小晶胞中，
    并使ovito观察视线方向（Y轴）经过反应区域和团簇中心
@@ -2410,7 +4448,7 @@ rotated_translated_struct : Atoms
    o_index : int
       反应物O原子的索引
    cutoff : float
-      截止距离，单位为Å，默认为6.0
+      截止距离，单位为Å，默认为8.0
    target_vector : np.ndarray 或 list/tuple
       目标向量，形状为(3,)，旋转后当前向量将与此向量同向
    new_cell : np.ndarray 或 list/tuple
@@ -2463,7 +4501,7 @@ c_index : int
 o_index : int
 反应物O原子的索引
 cutoff : float
-截止距离，单位为Å，默认为6.0
+截止距离，单位为Å，默认为8.0
 target_vector : np.ndarray 或 list/tuple
 目标向量，形状为(3,)，旋转后当前向量将与此向量同向
 new_cell : np.ndarray 或 list/tuple
@@ -2476,20 +4514,20 @@ new_indexes : list
 旋转并平移后的结构中，原始索引old_indexes对应的新的原子索引列表</p></div>
 </dd>
 <dt id="dcg_sci_tool.get_traj_focusing_reaction_site_batches"><code class="name flex">
-<span>def <span class="ident">get_traj_focusing_reaction_site_batches</span></span>(<span>cutoff=6, target_vector=None, new_cell=[20, 20, 20])</span>
+<span>def <span class="ident">get_traj_focusing_reaction_site_batches</span></span>(<span>cutoff=8.0, target_vector=None, new_cell=[20, 20, 20])</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_traj_focusing_reaction_site_batches(cutoff = 6, target_vector=None, new_cell=[20, 20, 20]):
+<pre><code class="python">def get_traj_focusing_reaction_site_batches(cutoff = 8.0, target_vector=None, new_cell=[20, 20, 20]):
     &#34;&#34;&#34;
     批量处理当前目录下所有满足特定正则表达式的文件，调用get_traj_focusing_reaction_site函数进行处理，并将结果保存为新的文件。
     
     Args:
 
-        cutoff (float): 截止距离，单位为Å，默认为6.0
+        cutoff (float): 截止距离，单位为Å，默认为8.0
     
         target_vector (np.ndarray 或 list/tuple):  目标向量，形状为(3,)，旋转后当前向量将与此向量同向
     
@@ -2503,7 +4541,7 @@ new_indexes : list
     target_vector = [0, -1, 0]
     for file in target_files:
         print(f&#34;Processing file: {file}&#34;)
-        _, _, c_idx, o_idx = parse_nebTraj_file_name(file)
+        _, _, _, c_idx, o_idx = parse_nebTraj_file_name(file)
         name_without_ext, _ = os.path.splitext(file)
         name_without_ext = &#34;_&#34;.join(name_without_ext.split(&#34;_&#34;)[:3])
         focused_traj, new_indexes = get_traj_focusing_reaction_site(
@@ -2517,11 +4555,92 @@ new_indexes : list
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
-<dd>截止距离，单位为Å，默认为6.0</dd>
+<dd>截止距离，单位为Å，默认为8.0</dd>
 </dl>
 <p>target_vector (np.ndarray 或 list/tuple):
 目标向量，形状为(3,)，旋转后当前向量将与此向量同向</p>
 <p>new_cell (np.ndarray 或 list/tuple): 新的晶胞尺寸，形状为(3,)，如 [a, b, c]</p></div>
+</dd>
+<dt id="dcg_sci_tool.get_unique_values_csv"><code class="name flex">
+<span>def <span class="ident">get_unique_values_csv</span></span>(<span>csv_file, column_input, has_header=True)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_unique_values_csv(csv_file, column_input, has_header=True):
+    &#34;&#34;&#34;
+    使用csv模块获取CSV文件中指定列的唯一值列表
+    
+    Args:
+
+        csv_file (str): CSV文件路径
+
+        column_input (str or int): 列标识，可以是列名（字符串）或列索引（从0开始的整数）
+    
+        has_header (bool): 是否有表头，默认True
+    &#34;&#34;&#34;
+    unique_values = set()
+    
+    try:
+        with open(csv_file, &#39;r&#39;, encoding=&#39;utf-8&#39;) as file:
+            csv_reader = csv.reader(file)
+            
+            if has_header:
+                header = next(csv_reader)
+                header_dict = {name: idx for idx, name in enumerate(header)}
+                
+                # 确定列索引
+                if isinstance(column_input, int):
+                    column_index = column_input
+                else:
+                    if column_input in header_dict:
+                        column_index = header_dict[column_input]
+                    else:
+                        print(f&#34;错误：列名 &#39;{column_input}&#39; 在文件中不存在。&#34;)
+                        print(f&#34;可用列名: {&#39;, &#39;.join(header)}&#34;)
+                        return []
+                
+                # 检查列索引是否有效
+                if column_index &gt;= len(header) or column_index &lt; 0:
+                    print(f&#34;错误：列索引 {column_index} 超出范围。&#34;)
+                    return []
+            else:
+                # 如果没有表头，列输入必须是整数索引
+                if not isinstance(column_input, int):
+                    print(&#34;错误：当CSV文件没有表头时，必须使用列索引（整数）。&#34;)
+                    return []
+                column_index = column_input
+            
+            # 读取数据并收集唯一值
+            for row_num, row in enumerate(csv_reader, start=2 if has_header else 1):
+                if column_index &lt; len(row):
+                    value = row[column_index].strip()
+                    if value:  # 跳过空值
+                        unique_values.add(value)
+                else:
+                    print(f&#34;警告：第{row_num}行列数不足，跳过&#34;)
+    
+    except FileNotFoundError:
+        print(f&#34;错误：文件 &#39;{csv_file}&#39; 未找到。&#34;)
+        return []
+    except Exception as e:
+        print(f&#34;读取文件时出错: {e}&#34;)
+        return []
+    
+    return list(unique_values)</code></pre>
+</details>
+<div class="desc"><p>使用csv模块获取CSV文件中指定列的唯一值列表</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>csv_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>CSV文件路径</dd>
+<dt><strong><code>column_input</code></strong> :&ensp;<code>str</code> or <code>int</code></dt>
+<dd>列标识，可以是列名（字符串）或列索引（从0开始的整数）</dd>
+<dt><strong><code>has_header</code></strong> :&ensp;<code>bool</code></dt>
+<dd>是否有表头，默认True</dd>
+</dl></div>
 </dd>
 <dt id="dcg_sci_tool.get_xyz_prop_columns"><code class="name flex">
 <span>def <span class="ident">get_xyz_prop_columns</span></span>(<span>input_file: str, property: str)</span>
@@ -2609,7 +4728,7 @@ new_indexes : list
 </summary>
 <pre><code class="python">def indexes2expression(indexes_list):
     &#34;&#34;&#34;
-    将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。
+    打印将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。
     &#34;&#34;&#34;
     exprssion_str = &#34;ParticleIndex == &#34; + str(indexes_list[0])
     for i in indexes_list[1:]:
@@ -2617,7 +4736,66 @@ new_indexes : list
     print(&#34;ExpressionSelectionModifier的表达式字符串:&#34;)
     print(exprssion_str)</code></pre>
 </details>
-<div class="desc"><p>将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。</p></div>
+<div class="desc"><p>打印将原子索引列表转换为ExpressionSelectionModifier的表达式字符串。</p></div>
+</dd>
+<dt id="dcg_sci_tool.label_barrier_batches"><code class="name flex">
+<span>def <span class="ident">label_barrier_batches</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def label_barrier_batches():
+    &#34;&#34;&#34;
+    给所有的.xyz格式的neb轨迹文件添加上能垒注释
+    &#34;&#34;&#34;
+    pattern = &#34;[0-9]+-[0-9]+_-?[0-9].[0-9]+_-?[0-9].[0-9]+_[0-9]+_[0-9]+_focused.xyz&#34;
+    target_files = find_matching_files(&#34;./&#34;, pattern)
+    print(&#34;Found files:&#34;, target_files)
+    for file in target_files:
+        _, Ea, _, _, _ = parse_nebTraj_file_name(file)
+        append_key_value_pairs_to_extxyz(file, [(&#34;energy barrier&#34;, str(Ea))],  os.path.splitext(file)[0]+&#34;_labelled.xyz&#34;)</code></pre>
+</details>
+<div class="desc"><p>给所有的.xyz格式的neb轨迹文件添加上能垒注释</p></div>
+</dd>
+<dt id="dcg_sci_tool.manual_name_xyz_png_at_nebdir"><code class="name flex">
+<span>def <span class="ident">manual_name_xyz_png_at_nebdir</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def manual_name_xyz_png_at_nebdir():
+    &#34;&#34;&#34;
+    将neb目录下的neb_graph.png和result.xyz重命名，使包含CO2序号、能垒、焓变、目标原子序号的信息
+    &#34;&#34;&#34;
+    # 获取当前目录
+    current_dir = os.getcwd()
+    print(f&#34;当前目录: {current_dir}&#34;)
+    
+    # 查找文件
+    log_file, pattern_dir = find_nearest_log_file(current_dir)
+    
+    if log_file:
+        print(f&#34;找到最近的 python.log 文件: {log_file}&#34;)
+    else:
+        print(&#34;未找到 python.log 文件&#34;)
+    
+    if pattern_dir:
+        print(f&#34;找到最近的满足模式 [0-9]+to[0-9]+ 的目录: {pattern_dir}&#34;)
+    else:
+        print(&#34;未找到满足模式 [0-9]+to[0-9]+ 的目录&#34;)
+
+    Ea, dH = get_Ea_dH_from_file()
+    c_idx, o_idx = get_target_atoms_from_file(log_file)
+    co2_indexes = pattern_dir.split(&#39;/&#39;)[-1].split(&#39;to&#39;)
+    final_name = f&#34;{co2_indexes[0]}-{co2_indexes[1]}_{Ea}_{dH}_{c_idx}_{o_idx}&#34;
+    os.rename(&#34;result.xyz&#34;, f&#34;{final_name}.xyz&#34;)
+    os.rename(&#34;neb_graph.png&#34;, f&#34;{final_name}.png&#34;)</code></pre>
+</details>
+<div class="desc"><p>将neb目录下的neb_graph.png和result.xyz重命名，使包含CO2序号、能垒、焓变、目标原子序号的信息</p></div>
 </dd>
 <dt id="dcg_sci_tool.mark_special_points"><code class="name flex">
 <span>def <span class="ident">mark_special_points</span></span>(<span>point_list=None)</span>
@@ -2683,6 +4861,434 @@ new_indexes : list
 </details>
 <div class="desc"><p>合并多个xyz轨迹文件</p></div>
 </dd>
+<dt id="dcg_sci_tool.mpirun_lammps"><code class="name flex">
+<span>def <span class="ident">mpirun_lammps</span></span>(<span>np=None, exec_path=None, input_file='in.lammps_neb', partition=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def mpirun_lammps(np=None, exec_path=None, input_file=&#34;in.lammps_neb&#34;, partition=None):
+    &#34;&#34;&#34;
+    通过python调用mpi命令，并行执行lammps
+
+    注意：
+    
+    需要事先在LSF环境中通过export命令设置环境变量NP（并行核数）和LAMMPS_EXEC（Lammps可执行文件地址）
+    
+    在LSF中运行: python -u run_lmps.py &gt; out.log 2&gt;&amp;1，保证python执行结果能够实时输出
+
+    Args:
+        np (int): 并行调用的CPU数量（默认环境变量中NP的值）
+
+        exec_path (str): lammps可执行文件的路径（默认环境变量中LAMMPS_EXEC的值）
+
+        input_file (str): lammps的in文件名
+
+        partition (str): lammps的-partition选项的参数
+        
+    
+    
+    &#34;&#34;&#34;
+    
+    # 确定MPI进程数
+    if np is None:
+        np = get_optimal_np()
+    
+    # 确定可执行文件路径
+    if exec_path is None:
+        exec_path = get_lmps_exec_path()
+    
+    
+    print(f&#34;LSF作业ID: {os.environ.get(&#39;LSB_JOBID&#39;, &#39;N/A&#39;)}&#34;)
+    print(f&#34;使用的MPI进程数: {np}&#34;)
+    print(f&#34;LAMMPS可执行文件: {exec_path}&#34;)
+    print(f&#34;输入文件: {input_file}&#34;)
+    
+    # 检查文件是否存在
+    if not Path(input_file).exists():
+        print(f&#34;错误: 输入文件 &#39;{input_file}&#39; 不存在&#34;)
+        return False
+    
+    if not Path(exec_path).exists():
+        print(f&#34;错误: 可执行文件 &#39;{exec_path}&#39; 不存在&#34;)
+        return False
+    
+    if not os.access(exec_path, os.X_OK):
+        print(f&#34;错误: 可执行文件 &#39;{exec_path}&#39; 没有执行权限&#34;)
+        return False
+    
+    # 构建命令
+    # 主要修改点：仅当partition参数不为None时，才在命令中包含-partition选项
+    cmd = [&#34;mpirun&#34;, &#34;-np&#34;, str(np), exec_path]
+    if partition is not None:
+        cmd.extend([&#34;-partition&#34;, partition])
+    cmd.extend([&#34;-i&#34;, input_file])
+    
+    # 设置输出文件
+    log_file = f&#34;{os.environ.get(&#39;LSB_JOBID&#39;, &#39;output&#39;)}.log&#34;
+    
+    print(f&#34;执行命令: {&#39; &#39;.join(cmd)}&#34;)
+    print(f&#34;输出日志: {log_file}&#34;)
+    print(f&#34;开始时间: {time.strftime(&#39;%Y-%m-%d %H:%M:%S&#39;)}&#34;)
+    print(&#34;-&#34; * 50)
+    
+    # 记录开始时间
+    start_time = time.time()
+    
+    print(&#34;开始执行lammps...&#34;)
+    try:
+        with open(log_file, &#39;w&#39;) as f:
+            # 运行命令
+            result = subprocess.run(
+                cmd,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=True
+            )
+        
+        # 计算运行时间
+        elapsed_time = time.time() - start_time
+        
+        print(f&#34;\n{&#39;=&#39;*50}&#34;)
+        print(f&#34;执行结束!&#34;)
+        print(f&#34;总运行时间: {elapsed_time:.2f} 秒 ({elapsed_time/60:.2f} 分钟)&#34;)
+        print(f&#34;结束时间: {time.strftime(&#39;%Y-%m-%d %H:%M:%S&#39;)}&#34;)
+        print(f&#34;日志文件: {log_file}&#34;)
+        
+        return True
+        
+    except subprocess.CalledProcessError as e:
+        print(f&#34;\n错误: 命令执行失败，返回码: {e.returncode}&#34;)
+        print(f&#34;请查看日志文件: {log_file}&#34;)
+        return False
+    
+    except FileNotFoundError as e:
+        print(f&#34;\n错误: 命令未找到 - {e}&#34;)
+        return False
+    
+    except Exception as e:
+        print(f&#34;\n未知错误: {e}&#34;)
+        return False</code></pre>
+</details>
+<div class="desc"><p>通过python调用mpi命令，并行执行lammps</p>
+<p>注意：</p>
+<p>需要事先在LSF环境中通过export命令设置环境变量NP（并行核数）和LAMMPS_EXEC（Lammps可执行文件地址）</p>
+<p>在LSF中运行: python -u run_lmps.py &gt; out.log 2&gt;&amp;1，保证python执行结果能够实时输出</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>np</code></strong> :&ensp;<code>int</code></dt>
+<dd>并行调用的CPU数量（默认环境变量中NP的值）</dd>
+<dt><strong><code>exec_path</code></strong> :&ensp;<code>str</code></dt>
+<dd>lammps可执行文件的路径（默认环境变量中LAMMPS_EXEC的值）</dd>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>lammps的in文件名</dd>
+<dt><strong><code>partition</code></strong> :&ensp;<code>str</code></dt>
+<dd>lammps的-partition选项的参数</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.neb_get_traj"><code class="name flex">
+<span>def <span class="ident">neb_get_traj</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def neb_get_traj():
+    &#34;&#34;&#34;
+    对NEB轨迹文件进行后处理
+    
+    功能：
+    1. 查找所有dump.neb.*.lmpstrj轨迹文件
+    2. 按编号排序
+    3. 提取每个轨迹的首尾结构
+    4. 分别保存为check.xyz和result.xyz文件
+    &#34;&#34;&#34;
+    
+    # 查找并排序轨迹文件
+    dump_files = find_matching_files(&#34;./&#34;, &#34;dump.neb.*.lmpstrj&#34;)
+    dump_files.sort(key=lambda x: int(re.search(r&#39;\.(\d+)\.&#39;, x).group(1)))
+    
+    # 存储结果
+    check_structures = []
+    result_structures = []
+    
+    # 处理每个轨迹文件
+    for i, traj_file in enumerate(dump_files, 1):
+        # 读取轨迹中的所有结构
+        structures = read(traj_file, &#34;:&#34;)
+        
+        if len(structures) &gt; 0:
+            # 取第一个和最后一个结构
+            check_structures.append(structures[0])
+            result_structures.append(structures[-1])
+            
+            print(f&#34;已处理 {i}/{len(dump_files)}: {traj_file} &#34;
+                  f&#34;(包含 {len(structures)} 个结构)&#34;)
+    
+    # 保存结果
+    if check_structures:
+        write(&#34;check.xyz&#34;, check_structures)
+        print(f&#34;已保存检查结构: check.xyz ({len(check_structures)} 个结构)&#34;)
+    
+    if result_structures:
+        write(&#34;result.xyz&#34;, result_structures)
+        print(f&#34;已保存结果结构: result.xyz ({len(result_structures)} 个结构)&#34;)</code></pre>
+</details>
+<div class="desc"><p>对NEB轨迹文件进行后处理</p>
+<p>功能：
+1. 查找所有dump.neb.*.lmpstrj轨迹文件
+2. 按编号排序
+3. 提取每个轨迹的首尾结构
+4. 分别保存为check.xyz和result.xyz文件</p></div>
+</dd>
+<dt id="dcg_sci_tool.neb_post_process"><code class="name flex">
+<span>def <span class="ident">neb_post_process</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def neb_post_process():
+    &#34;&#34;&#34;
+    对NEB轨迹文件进行后处理
+    
+    功能：
+    1. 生成初始插值轨迹和结束插值轨迹：check.xyz和result.xyz
+    2. 绘制势能变化图：neb_graph.png
+    &#34;&#34;&#34;
+    neb_get_traj()
+    plot_neb_graph()</code></pre>
+</details>
+<div class="desc"><p>对NEB轨迹文件进行后处理</p>
+<p>功能：
+1. 生成初始插值轨迹和结束插值轨迹：check.xyz和result.xyz
+2. 绘制势能变化图：neb_graph.png</p></div>
+</dd>
+<dt id="dcg_sci_tool.onekey_run_neb_normal"><code class="name flex">
+<span>def <span class="ident">onekey_run_neb_normal</span></span>(<span>mode='ads', mpi_partition='40x1', neb_max_refine_rounds=3)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def onekey_run_neb_normal(mode = &#34;ads&#34;, mpi_partition=&#34;40x1&#34;, neb_max_refine_rounds=3):
+    &#34;&#34;&#34;
+    对于ads模式：提取单个MD反应快照（反应物原子需要染成兰色），计算neb过程的能垒，
+    包括气体分子删除、初态优化、末态构建、NEB计算过程
+    对于no_ads模式：或者根据已经优化好的有吸附物的neb轨迹，计算无吸附物的neb过程。
+    包括反应位点附近吸附态原子删除、初态优化、末态构建、NEB 计过程。
+    Args:
+        mode (str): 计算模式，&#34;ads&#34;或&#34;no_ads&#34;
+
+        mpi_partition (str): 跑lammps的neb环境配置参数
+
+        neb_max_refine_rounds (int): neb单峰优化过程最大迭代轮数
+
+    &#34;&#34;&#34;
+    try:
+        # 1. 初始化
+        setup_logging()
+        
+        # 2. 查找并预处理输入文件
+        if mode == &#34;ads&#34;:
+            cleaned_atoms, target_atom_list, md_file, co2_indexes = find_and_preprocess_input()
+        elif mode == &#34;no_ads&#34;:
+            cleaned_atoms, target_atom_list, md_file, co2_indexes = find_and_preprocess_input_no_ads()
+        
+        
+        # 3. 初态结构优化
+        minimized_is_path = run_initial_state_minimization()
+        print(f&#34;minimized_is_path值：{minimized_is_path}&#34;)
+        
+        # 4. 构建末态结构
+        atoms_fs, fs_path = construct_final_state(minimized_is_path, target_atom_list)
+        
+        # 5. 运行 NEB 计算
+        run_neb_calculation_normal(minimized_is_path, target_atom_list, mpi_partition, neb_max_refine_rounds, co2_indexes)
+        
+        print(&#34;\n&#34; + &#34;=&#34; * 60)
+        print(&#34;所有计算步骤完成！&#34;)
+        print(f&#34;初态优化结果: {minimized_is_path}&#34;)
+        print(f&#34;末态结构: {fs_path}&#34;)
+        print(f&#34;NEB 计算结果目录: 2.neb/&#34;)
+        print(&#34;=&#34; * 60)
+        
+    except FileNotFoundError as e:
+        print(f&#34;错误: 文件未找到 - {e}&#34;)
+        return 1
+    except Exception as e:
+        print(f&#34;错误: 计算过程中发生异常 - {e}&#34;)
+        import traceback
+        traceback.print_exc()
+        return 1
+    
+    return 0</code></pre>
+</details>
+<div class="desc"><p>对于ads模式：提取单个MD反应快照（反应物原子需要染成兰色），计算neb过程的能垒，
+包括气体分子删除、初态优化、末态构建、NEB计算过程
+对于no_ads模式：或者根据已经优化好的有吸附物的neb轨迹，计算无吸附物的neb过程。
+包括反应位点附近吸附态原子删除、初态优化、末态构建、NEB 计过程。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>mode</code></strong> :&ensp;<code>str</code></dt>
+<dd>计算模式，"ads"或"no_ads"</dd>
+<dt><strong><code>mpi_partition</code></strong> :&ensp;<code>str</code></dt>
+<dd>跑lammps的neb环境配置参数</dd>
+<dt><strong><code>neb_max_refine_rounds</code></strong> :&ensp;<code>int</code></dt>
+<dd>neb单峰优化过程最大迭代轮数</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.onekey_run_neb_zbl"><code class="name flex">
+<span>def <span class="ident">onekey_run_neb_zbl</span></span>(<span>mode='ads', mpi_partition='40x1', neb_max_refine_rounds=3)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def onekey_run_neb_zbl(mode = &#34;ads&#34;, mpi_partition=&#34;40x1&#34;, neb_max_refine_rounds=3):
+    &#34;&#34;&#34;
+    对于ads模式：提取单个MD反应快照（反应物原子需要染成兰色），计算neb过程的能垒，
+    包括气体分子删除、初态优化、末态构建、NEB_zbl 计算、EACH NEB 计算过程
+    对于no_ads模式：或者根据已经优化好的有吸附物的neb轨迹，计算无吸附物的neb过程。
+    包括反应位点附近吸附态原子删除、初态优化、末态构建、NEB_zbl 计算、EACH NEB 计算过程。
+
+    Args:
+
+        mode (str): 计算模式，&#34;ads&#34;或&#34;no_ads&#34;，前者意思是包含吸附物，后者意思是不包含吸附物计算。默认是&#34;ads&#34;。
+
+        mpi_partition (str): 跑lammps的neb环境配置参数
+
+        neb_max_refine_rounds (int): neb单峰优化过程最大迭代轮数，默认是3。
+
+    &#34;&#34;&#34;
+    try:
+        # 1. 初始化
+        setup_logging()
+        
+        # 2. 查找并预处理输入
+        if mode == &#34;no_ads&#34;:
+            _, target_atom_list, _, co2_indexes = find_and_preprocess_input_no_ads()
+        elif mode == &#34;ads&#34;:
+            _, target_atom_list, _, co2_indexes = find_and_preprocess_input()
+        
+        # 3. 初态结构优化
+        minimized_is_path = run_initial_state_minimization()
+        print(f&#34;minimized_is_path值：{minimized_is_path}&#34;)
+        
+        # 4. 构建末态结构
+        _, fs_path = construct_final_state(minimized_is_path, target_atom_list)
+        
+        # 5. 运行 NEB_zbl 计算
+        run_neb_calculation_zbl(minimized_is_path, target_atom_list, mpi_partition, neb_max_refine_rounds)
+        
+        # 6. 运行 EACH NEB 计算
+        run_each_neb_calculation(target_atom_list, mpi_partition, co2_indexes)
+
+        print(&#34;\n&#34; + &#34;=&#34; * 60)
+        print(&#34;所有计算步骤完成！&#34;)
+        print(f&#34;初态优化结果: {minimized_is_path}&#34;)
+        print(f&#34;末态结构: {fs_path}&#34;)
+        print(f&#34;ZBL NEB 计算结果目录: 2.neb_zbl/&#34;)
+        print(f&#34;EACH NEB 计算结果目录: 3.neb_each/&#34;)
+        print(&#34;=&#34; * 60)
+        
+    except FileNotFoundError as e:
+        print(f&#34;错误: 文件未找到 - {e}&#34;)
+        return 1
+    except Exception as e:
+        print(f&#34;错误: 计算过程中发生异常 - {e}&#34;)
+        import traceback
+        traceback.print_exc()
+        return 1
+    
+    return 0</code></pre>
+</details>
+<div class="desc"><p>对于ads模式：提取单个MD反应快照（反应物原子需要染成兰色），计算neb过程的能垒，
+包括气体分子删除、初态优化、末态构建、NEB_zbl 计算、EACH NEB 计算过程
+对于no_ads模式：或者根据已经优化好的有吸附物的neb轨迹，计算无吸附物的neb过程。
+包括反应位点附近吸附态原子删除、初态优化、末态构建、NEB_zbl 计算、EACH NEB 计算过程。</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>mode</code></strong> :&ensp;<code>str</code></dt>
+<dd>计算模式，"ads"或"no_ads"，前者意思是包含吸附物，后者意思是不包含吸附物计算。默认是"ads"。</dd>
+<dt><strong><code>mpi_partition</code></strong> :&ensp;<code>str</code></dt>
+<dd>跑lammps的neb环境配置参数</dd>
+<dt><strong><code>neb_max_refine_rounds</code></strong> :&ensp;<code>int</code></dt>
+<dd>neb单峰优化过程最大迭代轮数，默认是3。</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.ovito2atoms"><code class="name flex">
+<span>def <span class="ident">ovito2atoms</span></span>(<span>data, type_names_order)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def ovito2atoms(data, type_names_order):
+    &#34;&#34;&#34;
+    从 OVITO 的 data 对象创建 ASE Atoms 对象
+    
+    Args:
+
+        data: OVITO 的 DataCollection 对象
+
+        type_names_order: 类型名称列表，索引对应 particle_type
+    
+    Returns:
+
+        ase_atoms: ASE 的 Atoms 对象
+    &#34;&#34;&#34;
+    # 1. 获取原子信息
+    particles = data.particles
+    
+    # 原子位置
+    positions = particles.positions[...].copy()  # shape: (N, 3)
+    
+    # 原子类型
+    particle_types = particles.particle_types[...]  # shape: (N,)
+    
+    # 将类型索引转换为元素符号
+    symbols = [type_names_order[t-1] for t in particle_types]  # 注意：OVITO 类型索引从1开始
+    
+    # 2. 获取晶胞信息
+    cell_matrix = data.cell[...]  # shape: (4, 3)
+    cell = cell_matrix[:, :3]  # 晶胞向量
+    origin = cell_matrix[:, 3]  # 晶胞原点
+    # 3. 处理周期性边界条件
+    pbc_flags = data.cell.pbc  # 从 OVITO 获取 PBC 标志
+    
+    # 4. 创建 ASE Atoms 对象
+    ase_atoms = Atoms(
+        symbols=symbols,
+        positions=positions - origin,  # 调整到晶胞原点
+        cell=cell,
+        pbc=pbc_flags
+    )
+    
+    return ase_atoms</code></pre>
+</details>
+<div class="desc"><p>从 OVITO 的 data 对象创建 ASE Atoms 对象</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>data</code></strong></dt>
+<dd>OVITO 的 DataCollection 对象</dd>
+<dt><strong><code>type_names_order</code></strong></dt>
+<dd>类型名称列表，索引对应 particle_type</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>ase_atoms</code></dt>
+<dd>ASE 的 Atoms 对象</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.parse_nebTraj_file_name"><code class="name flex">
 <span>def <span class="ident">parse_nebTraj_file_name</span></span>(<span>file_name)</span>
 </code></dt>
@@ -2703,6 +5309,8 @@ new_indexes : list
 
         tuple: neb过程信息
 
+            co2_indexes (list): 生成的CO2的序号列表
+
             Ea (float): 能垒
 
             dE (float): 焓变
@@ -2714,11 +5322,12 @@ new_indexes : list
     &#34;&#34;&#34;
     name_without_ext, _ = os.path.splitext(file_name)
     info = name_without_ext.split(&#34;_&#34;)
+    co2_indexes = info[0].split(&#34;-&#34;)
     Ea = float(info[1])
     dE = float(info[2])
     C_idx= int(info[3])
     O_idx= int(info[4])
-    return Ea, dE, C_idx, O_idx</code></pre>
+    return co2_indexes, Ea, dE, C_idx, O_idx</code></pre>
 </details>
 <div class="desc"><p>解析NEB轨迹文件名，提取Ea、dE、C_idx和O_idx信息</p>
 <h2 id="args">Args</h2>
@@ -2731,12 +5340,380 @@ new_indexes : list
 <dt><code>tuple</code></dt>
 <dd>
 <p>neb过程信息</p>
+<p>co2_indexes (list): 生成的CO2的序号列表</p>
 <p>Ea (float): 能垒</p>
 <p>dE (float): 焓变</p>
 <p>C_idx (int): 参与反应的CO的C原子索引</p>
 <p>O_idx (int): 参与反应的氧原子索引</p>
 </dd>
 </dl></div>
+</dd>
+<dt id="dcg_sci_tool.plot_basic_graph"><code class="name flex">
+<span>def <span class="ident">plot_basic_graph</span></span>(<span>src_file: str = 'neb_mep.dat',<br>x_col: int = 0,<br>y_cols: int | List[int] = 3,<br>legend_loc='upper right',<br>mode: str = 'line',<br>x_label: str = 'Indexes',<br>y_label: str = 'Potential Energy (eV)',<br>output_file: str | None = None,<br>colors: List[str] | None = None,<br>labels: List[str] | None = None,<br>title: str | None = None,<br>config: Dict[str, Any] | None = None) ‑> matplotlib.figure.Figure</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_basic_graph(
+    src_file: str = &#39;neb_mep.dat&#39;,
+    x_col: int = 0,
+    y_cols: Union[int, List[int]] = 3,
+    legend_loc = &#39;upper right&#39;,
+    mode: str = &#39;line&#39;,
+    x_label: str = &#39;Indexes&#39;,
+    y_label: str = &#39;Potential Energy (eV)&#39;,
+    output_file: Optional[str] = None,
+    colors: Optional[List[str]] = None,
+    labels: Optional[List[str]] = None,
+    title: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None
+) -&gt; plt.Figure:
+    &#34;&#34;&#34;
+    绘制基础折线图或散点图
+    
+    注意：
+    - 目前不支持图中的中文字符，请统一使用国际标准的英文
+    - 该函数只做前期基础配置，不输出图片，需要额外调用 plt.savefig() 输出图片
+    - 此设计方便在此基础上调用 plt 命令进行再加工
+    
+    Parameters
+    ----------
+    src_file : str, optional
+        源数据文件路径，文件内容为多列数据，默认 &#39;neb_mep.dat&#39;
+    x_col : int, optional
+        X轴数据列索引，默认 0
+    y_cols : Union[int, List[int]], optional
+        Y轴数据列索引（单个整数或整数列表），默认 3
+    legend_loc : str, optional
+        图例的位置，&#39;upper right&#39; 右上角，&#39;upper left&#39; 左上角，
+
+        &#39;lower right&#39; 右下角，&#39;lower left&#39; 左下角。
+
+        默认 &#39;upper right&#39;，
+    mode : str, optional
+        绘图模式，&#39;line&#39; 为折线图，&#39;scatter&#39; 为散点图，默认 &#39;line&#39;
+    x_label : str, optional
+        X轴标签，默认 &#39;Indexes&#39;
+    y_label : str, optional
+        Y轴标签，默认 &#39;Potential Energy (eV)&#39;
+    output_file : Optional[str], optional
+        输出文件路径，如果为None则不自动保存
+    colors : Optional[List[str]], optional
+        颜色列表，如果为None则使用默认颜色
+    labels : Optional[List[str]], optional
+        图例标签列表，如果为None则自动生成
+    title : Optional[str], optional
+        图表标题
+    config : Optional[Dict[str, Any]], optional
+        自定义配置字典，覆盖默认配置
+        
+    Returns
+    -------
+    plt.Figure
+        创建的matplotlib图形对象
+        
+    Raises
+    ------
+    FileNotFoundError
+        当指定的源文件不存在时
+    ValueError
+        当参数值不合法时
+    IndexError
+        当指定的列索引超出数据范围时
+        
+    Examples
+    --------
+    &gt;&gt;&gt; # 绘制单条折线
+    &gt;&gt;&gt; fig = plot_basic_line_chart(&#39;data.dat&#39;, x_col=0, y_cols=1)
+    &gt;&gt;&gt; plt.savefig(&#39;output.png&#39;, dpi=300, bbox_inches=&#39;tight&#39;)
+    &gt;&gt;&gt; plt.show()
+    
+    &gt;&gt;&gt; # 绘制多条散点图
+    &gt;&gt;&gt; fig = plot_basic_line_chart(&#39;data.dat&#39;, 
+    ...                             x_col=0, 
+    ...                             y_cols=[1, 2, 3],
+    ...                             mode=&#39;scatter&#39;,
+    ...                             labels=[&#39;Series A&#39;, &#39;Series B&#39;, &#39;Series C&#39;])
+    &gt;&gt;&gt; plt.savefig(&#39;scatter_plot.png&#39;, dpi=300)
+    &gt;&gt;&gt; plt.close(fig)
+    &#34;&#34;&#34;
+    
+    # 合并配置
+    plot_config = DEFAULT_CONFIG.copy()
+    if config:
+        plot_config.update(config)
+    
+    # 参数验证
+    if mode not in [&#39;line&#39;, &#39;scatter&#39;]:
+        raise ValueError(f&#34;不支持的绘图模式: {mode}，可选值为 &#39;line&#39; 或 &#39;scatter&#39;&#34;)
+    
+    # 确保y_cols是列表
+    if isinstance(y_cols, int):
+        y_cols = [y_cols]
+    
+    # 使用默认颜色或传入的颜色
+    if colors is None:
+        colors = DEFAULT_COLORS
+    else:
+        # 验证颜色格式
+        for i, color in enumerate(colors):
+            if not (isinstance(color, str) and (color.startswith(&#39;#&#39;) or color in plt.colors.cnames)):
+                logger.warning(f&#34;颜色 {color} 可能不是有效的matplotlib颜色&#34;)
+    
+    # 确保有足够的颜色
+    if len(colors) &lt; len(y_cols):
+        colors = colors * (len(y_cols) // len(colors) + 1)
+        logger.info(f&#34;颜色列表已扩展以适应 {len(y_cols)} 条曲线&#34;)
+    
+    try:
+        # 读取数据文件
+        logger.info(f&#34;正在读取数据文件: {src_file}&#34;)
+        data = pd.read_csv(src_file, header=None, sep=r&#39;\s+|,&#39;, engine=&#39;python&#39;,comment = &#39;#&#39;)
+        
+        if data.empty:
+            raise ValueError(f&#34;数据文件 {src_file} 为空&#34;)
+        
+        logger.info(f&#34;数据形状: {data.shape}, 列数: {data.shape[1]}&#34;)
+        
+        # 检查列索引是否有效
+        all_cols = [x_col] + y_cols
+        max_col = data.shape[1] - 1
+        for col in all_cols:
+            if col &gt; max_col:
+                error_msg = f&#34;列索引 {col} 超出数据范围（最大列索引：{max_col}）&#34;
+                logger.error(error_msg)
+                raise IndexError(error_msg)
+        
+        # 提取x轴数据
+        x_data = data.iloc[:, x_col]
+        
+        # 创建图形
+        fig, ax = plt.subplots(figsize=plot_config[&#39;figure_size&#39;])
+        
+        # 绘制多条曲线
+        line_handles = []
+        for i, y_col in enumerate(y_cols):
+            y_data = data.iloc[:, y_col]
+            
+            # 设置标签
+            if labels and i &lt; len(labels):
+                label = labels[i]
+            else:
+                label = f&#39;Column {y_col}&#39;
+            
+            # 根据模式绘图
+            if mode == &#39;line&#39;:
+                line, = ax.plot(x_data, y_data,
+                               marker=plot_config[&#39;marker_style&#39;],
+                               linestyle=&#39;-&#39;,
+                               linewidth=plot_config[&#39;line_width&#39;],
+                               color=colors[i % len(colors)],
+                               markersize=plot_config[&#39;marker_size&#39;],
+                               label=label)
+            elif mode == &#39;scatter&#39;:
+                line = ax.scatter(x_data, y_data,
+                                 marker=plot_config[&#39;marker_style&#39;],
+                                 color=colors[i % len(colors)],
+                                 s=plot_config[&#39;scatter_size&#39;],
+                                 label=label)
+            
+            line_handles.append(line)
+            logger.debug(f&#34;已绘制曲线 {i+1}/{len(y_cols)}: 列 {y_col}, 标签: {label}&#34;)
+        
+        # 设置坐标轴标签
+        ax.set_xlabel(x_label, fontsize=plot_config[&#39;axis_label_fontsize&#39;])
+        ax.set_ylabel(y_label, fontsize=plot_config[&#39;axis_label_fontsize&#39;])
+        
+        # 设置标题
+        if title:
+            ax.set_title(title, fontsize=plot_config[&#39;axis_label_fontsize&#39;] + 2, pad=20)
+        
+        # 设置刻度字体大小
+        ax.tick_params(axis=&#39;both&#39;, labelsize=plot_config[&#39;tick_label_fontsize&#39;])
+        
+        # 添加图例（如果有多条线）
+        if len(y_cols) &gt; 1:
+            ax.legend(handles=line_handles, 
+                     fontsize=plot_config[&#39;axis_label_fontsize&#39;] - 2,
+                     loc=legend_loc,
+                     framealpha=0.8)
+        
+        # 设置x轴刻度标记（每隔5个单位显示一个）
+        ax.xaxis.set_major_locator(MultipleLocator(5))
+        
+        # 是否显示网格
+        if plot_config[&#39;grid_visible&#39;]:
+            # 在每个数据点位置显示垂直网格线
+            for x in x_data:
+                ax.axvline(x=x, 
+                          color=&#39;gray&#39;, 
+                          linestyle=&#39;:&#39;, 
+                          alpha=plot_config[&#39;grid_alpha_light&#39;])
+            
+            # 在每隔5个单位的位置显示更明显的垂直网格线
+            x_min = int(np.floor(x_data.min()))
+            x_max = int(np.ceil(x_data.max()))
+            for x in range(x_min, x_max + 1, 5):
+                ax.axvline(x=x, 
+                          color=&#39;gray&#39;, 
+                          linestyle=&#39;--&#39;, 
+                          alpha=plot_config[&#39;grid_alpha_medium&#39;])
+            
+            # 显示水平网格线
+            ax.yaxis.grid(True, 
+                         which=&#39;both&#39;, 
+                         linestyle=&#39;--&#39;, 
+                         alpha=plot_config[&#39;grid_alpha_medium&#39;])
+        
+        # 自动调整布局
+        if plot_config[&#39;tight_layout&#39;]:
+            plt.tight_layout()
+        
+        # 保存图片（如果指定了输出文件）
+        if output_file:
+            try:
+                plt.savefig(output_file, dpi=300, bbox_inches=&#39;tight&#39;)
+                logger.info(f&#34;图表已保存为: {output_file}&#34;)
+            except Exception as save_error:
+                logger.error(f&#34;保存图片时出错: {str(save_error)}&#34;)
+                raise
+        
+        logger.info(f&#34;图表创建成功: 模式={mode}, 曲线数={len(y_cols)}&#34;)
+        return fig
+        
+    except FileNotFoundError:
+        error_msg = f&#34;错误：找不到文件 &#39;{src_file}&#39;&#34;
+        logger.error(error_msg)
+        raise FileNotFoundError(error_msg)
+    except pd.errors.EmptyDataError:
+        error_msg = f&#34;错误：文件 &#39;{src_file}&#39; 为空或格式不正确&#34;
+        logger.error(error_msg)
+        raise
+    except Exception as e:
+        error_msg = f&#34;发生错误: {str(e)}&#34;
+        logger.error(error_msg)
+        raise</code></pre>
+</details>
+<div class="desc"><p>绘制基础折线图或散点图</p>
+<p>注意：
+- 目前不支持图中的中文字符，请统一使用国际标准的英文
+- 该函数只做前期基础配置，不输出图片，需要额外调用 plt.savefig() 输出图片
+- 此设计方便在此基础上调用 plt 命令进行再加工</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>src_file</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>源数据文件路径，文件内容为多列数据，默认 'neb_mep.dat'</dd>
+<dt><strong><code>x_col</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>X轴数据列索引，默认 0</dd>
+<dt><strong><code>y_cols</code></strong> :&ensp;<code>Union[int, List[int]]</code>, optional</dt>
+<dd>Y轴数据列索引（单个整数或整数列表），默认 3</dd>
+<dt><strong><code>legend_loc</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>
+<p>图例的位置，'upper right' 右上角，'upper left' 左上角，</p>
+<p>'lower right' 右下角，'lower left' 左下角。</p>
+<p>默认 'upper right'，</p>
+</dd>
+<dt><strong><code>mode</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>绘图模式，'line' 为折线图，'scatter' 为散点图，默认 'line'</dd>
+<dt><strong><code>x_label</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>X轴标签，默认 'Indexes'</dd>
+<dt><strong><code>y_label</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Y轴标签，默认 'Potential Energy (eV)'</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>输出文件路径，如果为None则不自动保存</dd>
+<dt><strong><code>colors</code></strong> :&ensp;<code>Optional[List[str]]</code>, optional</dt>
+<dd>颜色列表，如果为None则使用默认颜色</dd>
+<dt><strong><code>labels</code></strong> :&ensp;<code>Optional[List[str]]</code>, optional</dt>
+<dd>图例标签列表，如果为None则自动生成</dd>
+<dt><strong><code>title</code></strong> :&ensp;<code>Optional[str]</code>, optional</dt>
+<dd>图表标题</dd>
+<dt><strong><code>config</code></strong> :&ensp;<code>Optional[Dict[str, Any]]</code>, optional</dt>
+<dd>自定义配置字典，覆盖默认配置</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>plt.Figure</code></dt>
+<dd>创建的matplotlib图形对象</dd>
+</dl>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>FileNotFoundError</code></dt>
+<dd>当指定的源文件不存在时</dd>
+<dt><code>ValueError</code></dt>
+<dd>当参数值不合法时</dd>
+<dt><code>IndexError</code></dt>
+<dd>当指定的列索引超出数据范围时</dd>
+</dl>
+<h2 id="examples">Examples</h2>
+<pre><code class="language-python-repl">&gt;&gt;&gt; # 绘制单条折线
+&gt;&gt;&gt; fig = plot_basic_line_chart('data.dat', x_col=0, y_cols=1)
+&gt;&gt;&gt; plt.savefig('output.png', dpi=300, bbox_inches='tight')
+&gt;&gt;&gt; plt.show()
+</code></pre>
+<pre><code class="language-python-repl">&gt;&gt;&gt; # 绘制多条散点图
+&gt;&gt;&gt; fig = plot_basic_line_chart('data.dat', 
+...                             x_col=0, 
+...                             y_cols=[1, 2, 3],
+...                             mode='scatter',
+...                             labels=['Series A', 'Series B', 'Series C'])
+&gt;&gt;&gt; plt.savefig('scatter_plot.png', dpi=300)
+&gt;&gt;&gt; plt.close(fig)
+</code></pre></div>
+</dd>
+<dt id="dcg_sci_tool.plot_neb_graph"><code class="name flex">
+<span>def <span class="ident">plot_neb_graph</span></span>(<span>src_file='neb_mep.dat', output_file='neb_graph.png')</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_neb_graph(src_file =&#39;neb_mep.dat&#39;, output_file = &#34;neb_graph.png&#34;):
+    &#34;&#34;&#34;
+    绘制MEP能量曲线图，返回能垒、焓变和是否收敛的元组
+    &#34;&#34;&#34;
+
+    is_converged = write_neb_mep_data(src_file)
+    plot_basic_graph(src_file=f&#39;{src_file}&#39;,x_col=0,y_cols=[3])
+
+    data = pd.read_csv(f&#39;{src_file}&#39;, header=None, sep=r&#39;\s+|,&#39;, engine=&#39;python&#39;,comment=&#34;#&#34;)
+    # 提取指定列的数据
+    x_data = data.iloc[:, 0]
+    y_data = data.iloc[:, 3]
+    # 找到纵坐标最大值点并标注
+    max_idx = np.argmax(y_data)
+    max_x = x_data.iloc[max_idx]
+    max_y = y_data.iloc[max_idx]
+
+    # 标注最大值点
+    plt.annotate(f&#39;Max: {max_y:.2f}&#39;, 
+                 xy=(max_x, max_y),
+                 xytext=(max_x, max_y + (y_data.max()-y_data.min())*0.05),
+                 fontsize=12,
+                 ha=&#39;center&#39;,
+                 arrowprops=dict(facecolor=&#39;red&#39;, shrink=0.05))
+
+    # 找到最后一个数据点并标注（不带箭头）
+    last_x = x_data.iloc[-1]
+    last_y = y_data.iloc[-1]
+
+    # 标注最后一个点（仅文本，不带箭头）
+    plt.text(last_x, last_y - (y_data.max()-y_data.min())*0.05, 
+             f&#39;End: {last_y:.2f}&#39;,
+             fontsize=12,
+             ha=&#39;center&#39;,
+             color=&#39;green&#39;)
+    # 保存图片
+    plt.savefig(f&#34;{output_file}&#34;, dpi=300, bbox_inches=&#39;tight&#39;)
+    print(f&#39;折线图已保存至: {output_file}&#39;)
+    # 显示图表（可选）
+    # plt.show()
+    # 返回能垒和焓变信息
+    return max_y, last_y, is_converged</code></pre>
+</details>
+<div class="desc"><p>绘制MEP能量曲线图，返回能垒、焓变和是否收敛的元组</p></div>
 </dd>
 <dt id="dcg_sci_tool.plot_scatter_color"><code class="name flex">
 <span>def <span class="ident">plot_scatter_color</span></span>(<span>input_csv_file: str,<br>max_threshold=None,<br>min_threshold=None,<br>special_point_list=None,<br>x_label: str = 'PCA 1',<br>y_label: str = 'PCA 2',<br>colorbar_label: str = 'Energy (eV/atom)')</span>
@@ -2937,6 +5914,82 @@ y_label='PCA 2',
 colorbar_label='Energy (eV/atom)'
 )</p></div>
 </dd>
+<dt id="dcg_sci_tool.pre_del_ads"><code class="name flex">
+<span>def <span class="ident">pre_del_ads</span></span>(<span>input_file: str, c_idx, o_idx, cutoff=6.0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def pre_del_ads(input_file: str, c_idx, o_idx, cutoff = 6.0):
+    &#34;&#34;&#34;
+    将优化后的反应中心附近有其他吸附物的neb轨迹文件第一帧结构中，距离目标C和O连线中点
+    cutoff距离内的其他C和O原子删去，如果某个半径范围内的原子是吸附态气体分子的一部分，
+    则整个分子会被删去，输出新的Atoms对象以及目标C和O原子的新的原子索引
+
+    Args:
+
+        input_file (str): 要处理的轨迹文件地址
+        c_idx (int): 反应物CO中C原子序号
+        o_idx (int): 反应物O原子的序号
+        cutoff (float): 半径范围，默认6 Angstrom
+
+    Returns:
+        tuple: 处理后的结果
+
+            filtered_atoms (Atoms): 处理后的Atoms对象
+        
+            tranfered_indexes (list): 转化后的目标C和O原子索引列表[c_idx, o_idx]
+
+    &#34;&#34;&#34;
+
+    
+    pipeline = import_file(input_file)
+    type_names_order = extract_atom_types(input_file)
+    frame = 0
+    data = pipeline.compute(frame)
+
+    # 获取要删除的原子的索引列表
+    list_for_deletion = detect_nearby_ads_for_deletion(data, type_names_order,c_idx, o_idx, cutoff)
+
+    # 获取要保留的原子的索引列表
+    keep_indexes=[]
+    for i in range(data.particles.count):
+        if i not in list_for_deletion:
+            keep_indexes.append(i)
+
+
+    # 处理并输出新结构
+    old_indexes_to_transfer = [c_idx, o_idx]
+    filtered_atoms, tranfered_indexes = create_filtered_structure(data, type_names_order, keep_indexes, old_indexes_to_transfer)
+
+    return filtered_atoms, tranfered_indexes</code></pre>
+</details>
+<div class="desc"><p>将优化后的反应中心附近有其他吸附物的neb轨迹文件第一帧结构中，距离目标C和O连线中点
+cutoff距离内的其他C和O原子删去，如果某个半径范围内的原子是吸附态气体分子的一部分，
+则整个分子会被删去，输出新的Atoms对象以及目标C和O原子的新的原子索引</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>要处理的轨迹文件地址</dd>
+<dt><strong><code>c_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>反应物CO中C原子序号</dd>
+<dt><strong><code>o_idx</code></strong> :&ensp;<code>int</code></dt>
+<dd>反应物O原子的序号</dd>
+<dt><strong><code>cutoff</code></strong> :&ensp;<code>float</code></dt>
+<dd>半径范围，默认6 Angstrom</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code></dt>
+<dd>
+<p>处理后的结果</p>
+<p>filtered_atoms (Atoms): 处理后的Atoms对象</p>
+<p>tranfered_indexes (list): 转化后的目标C和O原子索引列表[c_idx, o_idx]</p>
+</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.pre_del_gases"><code class="name flex">
 <span>def <span class="ident">pre_del_gases</span></span>(<span>input_file: str, old_indexes_to_transfer: list)</span>
 </code></dt>
@@ -3002,17 +6055,17 @@ colorbar_label='Energy (eV/atom)'
 </dl></div>
 </dd>
 <dt id="dcg_sci_tool.resultData2extxyz"><code class="name flex">
-<span>def <span class="ident">resultData2extxyz</span></span>(<span>input_file: str)</span>
+<span>def <span class="ident">resultData2extxyz</span></span>(<span>input_file: str, output_file='structure.xyz')</span>
 </code></dt>
 <dd>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def resultData2extxyz(input_file: str):
+<pre><code class="python">def resultData2extxyz(input_file: str, output_file = &#34;structure.xyz&#34;):
     &#34;&#34;&#34;
     
-    将lammps的.data格式的文件转化为.extxyz格式的文件。
+    将lammps的.data格式的文件转化为.extxyz格式的文件，同时保持原子排列顺序不变
 
     注意：
     
@@ -3021,11 +6074,12 @@ colorbar_label='Energy (eV/atom)'
     元素原子量无须严格和代码内置的 原子量-元素符号 列表中对应原子量匹配，脚本会寻找最接近原子量的元素
 
     Args:
+
         input_file (str): 要处理的lammps的data文件的地址
+
+        output_file (str): 转化后的.xyz文件名称（默认：structure.xyz）
+
     &#34;&#34;&#34;
-    
-    # 输出文件名称
-    output_file = &#34;structure.extxyz&#34;
     
     # 读取数据
     atoms, elements, masses, atom_types, x_coords, y_coords, z_coords, xlo, xhi, ylo, yhi, zlo, zhi = read_lammps_data(input_file)
@@ -3036,12 +6090,20 @@ colorbar_label='Energy (eV/atom)'
         print(f&#34;质量范围: {min(masses):.3f} - {max(masses):.3f}&#34;)
     print(f&#34;晶胞参数: x={xhi-xlo:.3f} Å, y={yhi-ylo:.3f} Å, z={zhi-zlo:.3f} Å&#34;)
     
+    # 验证原子是否已按ID排序
+    if atoms:
+        is_sorted = all(atoms[i] &lt; atoms[i+1] for i in range(len(atoms)-1))
+        if is_sorted:
+            print(&#34;原子已按ID排序（从小到大）&#34;)
+        else:
+            print(&#34;警告：原子ID顺序异常&#34;)
+    
     # 创建.extxyz文件
     create_extxyz(atoms, elements, masses, atom_types, x_coords, y_coords, z_coords, 
                   xlo, xhi, ylo, yhi, zlo, zhi, output_file)
     print(f&#34;.extxyz文件已生成: {output_file}&#34;)</code></pre>
 </details>
-<div class="desc"><p>将lammps的.data格式的文件转化为.extxyz格式的文件。</p>
+<div class="desc"><p>将lammps的.data格式的文件转化为.extxyz格式的文件，同时保持原子排列顺序不变</p>
 <p>注意：</p>
 <p>只能处理含有元素信息的result.data文件， 无法处理不含元素信息的ini.data。</p>
 <p>元素原子量无须严格和代码内置的 原子量-元素符号 列表中对应原子量匹配，脚本会寻找最接近原子量的元素</p>
@@ -3049,6 +6111,8 @@ colorbar_label='Energy (eV/atom)'
 <dl>
 <dt><strong><code>input_file</code></strong> :&ensp;<code>str</code></dt>
 <dd>要处理的lammps的data文件的地址</dd>
+<dt><strong><code>output_file</code></strong> :&ensp;<code>str</code></dt>
+<dd>转化后的.xyz文件名称（默认：structure.xyz）</dd>
 </dl></div>
 </dd>
 <dt id="dcg_sci_tool.rotate_v1_around_p_to_v2"><code class="name flex">
@@ -3195,6 +6259,391 @@ colorbar_label='Energy (eV/atom)'
 旋转后的原子结构</dd>
 </dl></div>
 </dd>
+<dt id="dcg_sci_tool.run_each_neb_calculation"><code class="name flex">
+<span>def <span class="ident">run_each_neb_calculation</span></span>(<span>target_atom_list, mpi_partition='40x1', co2_indexes=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def run_each_neb_calculation(target_atom_list,mpi_partition=&#34;40x1&#34;,co2_indexes = None):
+    &#34;&#34;&#34;
+    在自动截取MD轨迹的算能垒的自动化流程中，基于NEB zbl基础继续运行 EACH NEB 计算
+    
+    Args:
+        target_atom_list (list): 目标原子列表
+        mpi_partition (str, optional): MPI 分区名称，默认 &#34;40x1&#34;
+        co2_indexes (list, optional): CO2 索引列表，默认 None
+    
+    Returns:
+        None
+    &#34;&#34;&#34;
+    print(&#34;\n&#34; + &#34;=&#34; * 60)
+    print(&#34;步骤 4: 运行 EACH NEB 计算&#34;)
+    print(&#34;=&#34; * 60)
+    
+    # 创建工作目录
+    neb_dir = create_workspace(&#34;3.neb_each&#34;, [&#34;nep.txt&#34;, &#34;in.lammps_neb_each&#34;]) 
+    original_dir = Path.cwd()
+    
+    try:
+        os.chdir(neb_dir)
+        
+        # 1. 构建初态数据文件
+        print(&#34;构建初态数据文件...&#34;)
+        getEachfromXYZ(f&#39;{original_dir}/2.neb_zbl/zbl_final_results.xyz&#39;)
+        
+        # 3. 运行 NEB 计算
+        print(&#34;运行 LAMMPS EACH NEB 计算...&#34;)
+        mpirun_lammps(input_file=&#34;in.lammps_neb_each&#34;, partition=mpi_partition)
+        
+        # 4. 提取轨迹和绘图
+        print(&#34;提取 EACH NEB 轨迹...&#34;)
+        neb_get_traj()
+        
+        print(&#34;生成 EACH NEB 能垒图...&#34;)
+        Ea, dH, isConverged = plot_neb_graph(src_file=&#34;neb_mep.dat&#34;, output_file=&#34;neb_graph.png&#34;)
+        
+        # 判断是否收敛
+        if isConverged == False:
+            print(&#34;neb_each 结束，力未收敛&#34;)
+
+        # 将最终neb轨迹和MEP图像复制到主目录
+        shutil.copy(f&#39;result.xyz&#39;, f&#39;{original_dir}/{co2_indexes[0]}-{co2_indexes[1]}_{Ea}_{dH}_{target_atom_list[0]}_{target_atom_list[1]}.xyz&#39;)
+        shutil.copy(f&#39;neb_graph.png&#39;, f&#39;{original_dir}/{co2_indexes[0]}-{co2_indexes[1]}_{Ea}_{dH}_{target_atom_list[0]}_{target_atom_list[1]}.png&#39;)
+
+        
+    finally:
+        os.chdir(original_dir)
+    
+    print(&#34;EACH NEB 计算完成！&#34;)</code></pre>
+</details>
+<div class="desc"><p>在自动截取MD轨迹的算能垒的自动化流程中，基于NEB zbl基础继续运行 EACH NEB 计算</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>target_atom_list</code></strong> :&ensp;<code>list</code></dt>
+<dd>目标原子列表</dd>
+<dt><strong><code>mpi_partition</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>MPI 分区名称，默认 "40x1"</dd>
+<dt><strong><code>co2_indexes</code></strong> :&ensp;<code>list</code>, optional</dt>
+<dd>CO2 索引列表，默认 None</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>None</p></div>
+</dd>
+<dt id="dcg_sci_tool.run_initial_state_minimization"><code class="name flex">
+<span>def <span class="ident">run_initial_state_minimization</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def run_initial_state_minimization():
+    &#34;&#34;&#34;
+    在自动截取MD轨迹的算能垒的自动化流程中，运行初态结构优化
+    包括创建1.IS_min目录，复制文件到该目录，运行LAMMPS最小化，转换结果为可读格式。
+    返回优化后的结构文件路径
+    Returns:
+        Path: 优化后的结构文件路径
+    &#34;&#34;&#34;
+    print(&#34;\n&#34; + &#34;=&#34; * 60)
+    print(&#34;步骤 1: 初态结构优化&#34;)
+    print(&#34;=&#34; * 60)
+    
+    # 准备工作目录
+    is_dir = create_workspace(&#34;1.IS_min&#34;, [&#34;nep.txt&#34;, &#34;in.lammps_min&#34;, &#34;preprocessed.xyz&#34;])
+    
+    # 保存当前目录
+    original_dir = Path.cwd()
+    
+    try:
+        os.chdir(is_dir)
+        
+        # 转换轨迹为初始数据
+        traj2iniData(
+            traj_file=&#34;preprocessed.xyz&#34;,
+            specorder=[&#39;C&#39;, &#39;O&#39;, &#39;Pd&#39;, &#39;Au&#39;],
+            start_frame=0,
+            end_frame=0
+        )
+        
+        # 重命名数据文件
+        data_file = Path(&#34;0.data&#34;)
+        if data_file.exists():
+            data_file.rename(&#34;ini.data&#34;)
+            print(&#34;已将 0.data 重命名为 ini.data&#34;)
+        
+        # 运行 LAMMPS 最小化
+        print(&#34;运行 LAMMPS 结构优化...&#34;)
+        mpirun_lammps(input_file=&#34;in.lammps_min&#34;)
+        
+        # 转换结果为可读格式
+        resultData2extxyz(input_file=&#34;result.data&#34;, output_file=&#34;minimized_IS.xyz&#34;)
+        print(&#34;优化完成，结果保存为: minimized_IS.xyz&#34;)
+        
+    finally:
+        os.chdir(original_dir)
+    
+    return original_dir / is_dir / &#34;minimized_IS.xyz&#34;</code></pre>
+</details>
+<div class="desc"><p>在自动截取MD轨迹的算能垒的自动化流程中，运行初态结构优化
+包括创建1.IS_min目录，复制文件到该目录，运行LAMMPS最小化，转换结果为可读格式。
+返回优化后的结构文件路径</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Path</code></dt>
+<dd>优化后的结构文件路径</dd>
+</dl></div>
+</dd>
+<dt id="dcg_sci_tool.run_neb_calculation_normal"><code class="name flex">
+<span>def <span class="ident">run_neb_calculation_normal</span></span>(<span>minimized_is_path,<br>target_atom_list,<br>mpi_partition='40x1',<br>neb_max_refine_rounds=3,<br>co2_indexes=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def run_neb_calculation_normal(minimized_is_path, target_atom_list,mpi_partition=&#34;40x1&#34;,neb_max_refine_rounds = 3, co2_indexes = None):
+    &#34;&#34;&#34;
+    运行 NEB 计算
+    &#34;&#34;&#34;
+    print(&#34;\n&#34; + &#34;=&#34; * 60)
+    print(&#34;步骤 3: 运行 NEB 计算&#34;)
+    print(&#34;=&#34; * 60)
+    
+    # 创建工作目录
+    neb_dir = create_workspace(&#34;2.neb&#34;, [&#34;nep.txt&#34;, &#34;in.lammps_neb&#34;])
+    original_dir = Path.cwd()
+    
+    try:
+        os.chdir(neb_dir)
+        
+        # 1. 构建初态数据文件
+        print(&#34;构建初态数据文件...&#34;)
+        traj2iniData(
+            traj_file=str(minimized_is_path),
+            specorder=[&#39;C&#39;, &#39;O&#39;, &#39;Pd&#39;, &#39;Au&#39;],
+            start_frame=0,
+            end_frame=0
+        )
+        
+        if Path(&#34;0.data&#34;).exists():
+            Path(&#34;0.data&#34;).rename(&#34;IS.data&#34;)
+            print(&#34;已创建 IS.data&#34;)
+        
+        # 2. 构建末态数据文件
+        print(&#34;构建末态数据文件...&#34;)
+        atoms_fs = construct_CO2_formation_FS(str(minimized_is_path), target_atom_list)
+        atoms2lmps_resultData(atoms=atoms_fs, output_file=&#34;FS.data&#34;)
+        print(&#34;已创建 FS.data&#34;)
+        
+        # 3. 运行 NEB 计算
+        print(&#34;运行 LAMMPS NEB 计算...&#34;)
+        mpirun_lammps(input_file=&#34;in.lammps_neb&#34;, partition=mpi_partition)
+        
+        # 4. 提取轨迹和绘图
+        print(&#34;提取 NEB 轨迹...&#34;)
+        neb_get_traj()
+        
+        print(&#34;生成 NEB 能垒图...&#34;)
+        Ea, dH, isConverged = plot_neb_graph(src_file=&#34;neb_mep.dat&#34;, output_file=&#34;neb_graph.png&#34;)
+        
+
+        found_local_minima, left_idx, right_idx = get_local_minima_sides_of_peak(
+        mep_data_file=&#34;neb_mep.dat&#34;, 
+        neb_traj_file=&#34;result.xyz&#34;
+    )
+
+        if found_local_minima:
+            # 5. 自动优化 NEB
+            print(f&#34;发现中间态，开始 NEB 自动优化 (最多 {neb_max_refine_rounds} 轮)...&#34;)
+
+            Ea, dH, final_neb_dir, isConverged = auto_neb_refine(lammps_in_file=&#34;in.lammps_neb&#34;, left_idx=left_idx, right_idx=right_idx, max_round_num=neb_max_refine_rounds)
+        else:
+            
+            final_neb_dir = f&#34;{original_dir}/{neb_dir}&#34;
+
+        # 判断是否收敛
+        if isConverged == False:
+            print(&#34;neb结束，力未收敛&#34;)
+
+        # 将最终neb轨迹和MEP图像复制到主目录
+        shutil.copy(f&#39;{final_neb_dir}/result.xyz&#39;, f&#39;{original_dir}/{co2_indexes[0]}-{co2_indexes[1]}_{Ea}_{dH}_{target_atom_list[0]}_{target_atom_list[1]}.xyz&#39;)
+        shutil.copy(f&#39;{final_neb_dir}/neb_graph.png&#39;, f&#39;{original_dir}/{co2_indexes[0]}-{co2_indexes[1]}_{Ea}_{dH}_{target_atom_list[0]}_{target_atom_list[1]}.png&#39;)
+
+
+    finally:
+        os.chdir(original_dir)
+    
+    print(&#34;NEB 计算完成！&#34;)</code></pre>
+</details>
+<div class="desc"><p>运行 NEB 计算</p></div>
+</dd>
+<dt id="dcg_sci_tool.run_neb_calculation_zbl"><code class="name flex">
+<span>def <span class="ident">run_neb_calculation_zbl</span></span>(<span>minimized_is_path,<br>target_atom_list,<br>mpi_partition='40x1',<br>neb_max_refine_rounds=3)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def run_neb_calculation_zbl(minimized_is_path, target_atom_list,mpi_partition=&#34;40x1&#34;,neb_max_refine_rounds = 3):
+    &#34;&#34;&#34;
+    在自动截取MD轨迹的算能垒的自动化流程中，运行 NEB_zbl 计算，用于避开初始线性插值导致的原子距离过近的问题
+    
+    Args:
+        minimized_is_path (Path): 最小化后的初始结构文件路径
+        target_atom_list (list): 目标原子列表
+        mpi_partition (str, optional): MPI 分区名称，默认 &#34;40x1&#34;
+     neb_max_refine_rounds (int, optional): 自动优化轮数，默认 3
+    
+    &#34;&#34;&#34;
+    print(&#34;\n&#34; + &#34;=&#34; * 60)
+    print(&#34;步骤 3: 运行 NEB_zbl 计算&#34;)
+    print(&#34;=&#34; * 60)
+    
+    # 创建工作目录
+    neb_dir = create_workspace(&#34;2.neb_zbl&#34;, [&#34;nep.txt&#34;, &#34;in.lammps_neb_zbl&#34;])
+    original_dir = Path.cwd()
+    
+    try:
+        os.chdir(neb_dir)
+        
+        # 1. 构建初态数据文件
+        print(&#34;构建初态数据文件...&#34;)
+        traj2iniData(
+            traj_file=str(minimized_is_path),
+            specorder=[&#39;C&#39;, &#39;O&#39;, &#39;Pd&#39;, &#39;Au&#39;],
+            start_frame=0,
+            end_frame=0
+        )
+        
+        if Path(&#34;0.data&#34;).exists():
+            Path(&#34;0.data&#34;).rename(&#34;IS.data&#34;)
+            print(&#34;已创建 IS.data&#34;)
+        
+        # 2. 构建末态数据文件
+        print(&#34;构建末态数据文件...&#34;)
+        atoms_fs = construct_CO2_formation_FS(str(minimized_is_path), target_atom_list)
+        atoms2lmps_resultData(atoms=atoms_fs, output_file=&#34;FS.data&#34;)
+        print(&#34;已创建 FS.data&#34;)
+        
+        # 3. 运行 NEB 计算
+        print(&#34;运行 LAMMPS NEB_zbl 计算...&#34;)
+        mpirun_lammps(input_file=&#34;in.lammps_neb_zbl&#34;, partition=mpi_partition)
+        
+        # 4. 提取轨迹和绘图
+        print(&#34;提取 NEB_zbl 轨迹...&#34;)
+        neb_get_traj()
+        
+        print(&#34;生成 NEB_zbl 能垒图...&#34;)
+        Ea, dH, isConverged = plot_neb_graph(src_file=&#34;neb_mep.dat&#34;, output_file=&#34;neb_graph.png&#34;)
+        
+
+        found_local_minima, left_idx, right_idx = get_local_minima_sides_of_peak(
+        mep_data_file=&#34;neb_mep.dat&#34;, 
+        neb_traj_file=&#34;result.xyz&#34;
+    )
+
+        if found_local_minima:
+            # 5. 自动优化 NEB
+            print(f&#34;发现中间态，开始 NEB_zbl 自动优化 (最多 {neb_max_refine_rounds} 轮)...&#34;)
+
+            Ea, dH, final_neb_dir, isConverged = auto_neb_refine(lammps_in_file=&#34;in.lammps_neb_zbl&#34;, left_idx=left_idx, right_idx=right_idx, max_round_num=neb_max_refine_rounds)
+        else:
+            
+            final_neb_dir = f&#34;{original_dir}/{neb_dir}&#34;
+
+        # 判断是否收敛
+        if isConverged == False:
+            print(&#34;neb_zbl 结束结束，力未收敛&#34;)
+
+        # 将最终neb轨迹和MEP图像复制到主目录
+        shutil.copy(f&#39;{final_neb_dir}/result.xyz&#39;, f&#39;{original_dir}/2.neb_zbl/zbl_final_results.xyz&#39;)
+        shutil.copy(f&#39;{final_neb_dir}/neb_graph.png&#39;, f&#39;{original_dir}/2.neb_zbl/zbl_final_graph.png&#39;)
+
+
+    finally:
+        os.chdir(original_dir)
+    
+    print(&#34;NEB_zbl 计算完成！&#34;)</code></pre>
+</details>
+<div class="desc"><p>在自动截取MD轨迹的算能垒的自动化流程中，运行 NEB_zbl 计算，用于避开初始线性插值导致的原子距离过近的问题</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>minimized_is_path</code></strong> :&ensp;<code>Path</code></dt>
+<dd>最小化后的初始结构文件路径</dd>
+<dt><strong><code>target_atom_list</code></strong> :&ensp;<code>list</code></dt>
+<dd>目标原子列表</dd>
+<dt><strong><code>mpi_partition</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>MPI 分区名称，默认 "40x1"</dd>
+</dl>
+<p>neb_max_refine_rounds (int, optional): 自动优化轮数，默认 3</p></div>
+</dd>
+<dt id="dcg_sci_tool.scatter_xyz"><code class="name flex">
+<span>def <span class="ident">scatter_xyz</span></span>(<span>x_list: list, y_list: list, z_list: list, color_list: list, vmin, vmax, max_color=None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def scatter_xyz(x_list:list, y_list:list, z_list:list, color_list:list, vmin, vmax, max_color = None):
+    &#34;&#34;&#34;
+    将三维数据点按照color_list中的值映射到Viridis色阶的颜色，并将结果保存为plot.xyz文件
+
+    Args:
+        x_list: x坐标列表
+        y_list: y坐标列表
+        z_list: z坐标列表
+        color_list: 用于颜色映射的数值列表
+        vmin: 可选的最小值，用于归一化。如果为None，将使用输入数组的最小值
+        vmax: 可选的最大值，用于归一化。如果为None，将使用输入数组的最大值
+        max_color: 可选的最大颜色值，用于超出范围时的颜色，如果为None，将使用黄色
+
+
+    &#34;&#34;&#34;
+    Lattice_side = 100.0
+    N_atoms = len(x_list)
+
+    range_x = max(x_list) - min(x_list)
+    range_y = max(y_list) - min(y_list)
+    range_z = max(z_list) - min(z_list)
+
+    colors = float_to_viridis_rgb(color_list, vmin=vmin, vmax=vmax, max_color=max_color)
+
+    with open(&#34;plot.xyz&#34;, &#34;w&#34;, newline=&#39;&#39;, encoding=&#39;utf-8&#39;) as xyz_file:
+        xyz_file.write(f&#34;{N_atoms}\n&#34;)
+        xyz_file.write(f&#39;Lattice=&#34;{Lattice_side} 0.0 0.0 0.0 {Lattice_side} 0.0 0.0 0.0 {Lattice_side}&#34; Properties=pos:R:3:color:R:3\n&#39;)
+
+        for x, y, z, color in zip(x_list, y_list, z_list, colors):
+            x = x/range_x * Lattice_side
+            y = y/range_y * Lattice_side
+            z = z/range_z * Lattice_side
+
+            xyz_file.write(f&#34;{x:.3f} {y:.3f} {z:.3f} {color[0]:.3f} {color[1]:.3f} {color[2]:.3f}\n&#34;)</code></pre>
+</details>
+<div class="desc"><p>将三维数据点按照color_list中的值映射到Viridis色阶的颜色，并将结果保存为plot.xyz文件</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>x_list</code></strong></dt>
+<dd>x坐标列表</dd>
+<dt><strong><code>y_list</code></strong></dt>
+<dd>y坐标列表</dd>
+<dt><strong><code>z_list</code></strong></dt>
+<dd>z坐标列表</dd>
+<dt><strong><code>color_list</code></strong></dt>
+<dd>用于颜色映射的数值列表</dd>
+<dt><strong><code>vmin</code></strong></dt>
+<dd>可选的最小值，用于归一化。如果为None，将使用输入数组的最小值</dd>
+<dt><strong><code>vmax</code></strong></dt>
+<dd>可选的最大值，用于归一化。如果为None，将使用输入数组的最大值</dd>
+<dt><strong><code>max_color</code></strong></dt>
+<dd>可选的最大颜色值，用于超出范围时的颜色，如果为None，将使用黄色</dd>
+</dl></div>
+</dd>
 <dt id="dcg_sci_tool.split_xyz_by_elements"><code class="name flex">
 <span>def <span class="ident">split_xyz_by_elements</span></span>(<span>filename: str)</span>
 </code></dt>
@@ -3269,60 +6718,6 @@ colorbar_label='Energy (eV/atom)'
 <dt><strong><code>filename</code></strong> :&ensp;<code>str</code></dt>
 <dd>输入的.xyz轨迹文件地址</dd>
 </dl></div>
-</dd>
-<dt id="dcg_sci_tool.sum_to_n"><code class="name flex">
-<span>def <span class="ident">sum_to_n</span></span>(<span>n: int) ‑> int</span>
-</code></dt>
-<dd>
-<details class="source">
-<summary>
-<span>Expand source code</span>
-</summary>
-<pre><code class="python">def sum_to_n(n: int) -&gt; int:
-    &#34;&#34;&#34;
-    Calculate the sum of all integers from 1 to n inclusive.
-
-    Args:
-        n (int): The upper limit (must be a positive integer).
-
-    Returns:
-        int: The sum 1 + 2 + ... + n.
-
-    Raises:
-        ValueError: If n is not a positive integer.
-
-    Examples:
-        &gt;&gt;&gt; sum_to_n(5)
-        15
-        &gt;&gt;&gt; sum_to_n(100)
-        5050
-    &#34;&#34;&#34;
-    if not isinstance(n, int) or n &lt;= 0:
-        raise ValueError(&#34;n must be a positive integer.&#34;)
-    return n * (n + 1) // 2  # 使用高斯求和公式，效率O(1)</code></pre>
-</details>
-<div class="desc"><p>Calculate the sum of all integers from 1 to n inclusive.</p>
-<h2 id="args">Args</h2>
-<dl>
-<dt><strong><code>n</code></strong> :&ensp;<code>int</code></dt>
-<dd>The upper limit (must be a positive integer).</dd>
-</dl>
-<h2 id="returns">Returns</h2>
-<dl>
-<dt><code>int</code></dt>
-<dd>The sum 1 + 2 + &hellip; + n.</dd>
-</dl>
-<h2 id="raises">Raises</h2>
-<dl>
-<dt><code>ValueError</code></dt>
-<dd>If n is not a positive integer.</dd>
-</dl>
-<h2 id="examples">Examples</h2>
-<pre><code class="language-python-repl">&gt;&gt;&gt; sum_to_n(5)
-15
-&gt;&gt;&gt; sum_to_n(100)
-5050
-</code></pre></div>
 </dd>
 <dt id="dcg_sci_tool.traj2iniData"><code class="name flex">
 <span>def <span class="ident">traj2iniData</span></span>(<span>traj_file: str, specorder=['C', 'O', 'Pd', 'Au'], start_frame=0, end_frame=None)</span>
@@ -3461,6 +6856,7 @@ target_center : np.ndarray 或 list/tuple
 <ul>
 <li><code><a title="dcg_sci_tool.applications" href="applications/index.html">dcg_sci_tool.applications</a></code></li>
 <li><code><a title="dcg_sci_tool.cli" href="cli.html">dcg_sci_tool.cli</a></code></li>
+<li><code><a title="dcg_sci_tool.csv" href="csv/index.html">dcg_sci_tool.csv</a></code></li>
 <li><code><a title="dcg_sci_tool.plot" href="plot/index.html">dcg_sci_tool.plot</a></code></li>
 <li><code><a title="dcg_sci_tool.reaction" href="reaction/index.html">dcg_sci_tool.reaction</a></code></li>
 <li><code><a title="dcg_sci_tool.structures_analysis" href="structures_analysis/index.html">dcg_sci_tool.structures_analysis</a></code></li>
@@ -3470,42 +6866,85 @@ target_center : np.ndarray 或 list/tuple
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
 <li><code><a title="dcg_sci_tool.add_config_to_xyz" href="#dcg_sci_tool.add_config_to_xyz">add_config_to_xyz</a></code></li>
+<li><code><a title="dcg_sci_tool.append_key_value_pairs_to_extxyz" href="#dcg_sci_tool.append_key_value_pairs_to_extxyz">append_key_value_pairs_to_extxyz</a></code></li>
+<li><code><a title="dcg_sci_tool.atoms2lmps_resultData" href="#dcg_sci_tool.atoms2lmps_resultData">atoms2lmps_resultData</a></code></li>
+<li><code><a title="dcg_sci_tool.auto_neb_refine" href="#dcg_sci_tool.auto_neb_refine">auto_neb_refine</a></code></li>
+<li><code><a title="dcg_sci_tool.averaging_count_matches" href="#dcg_sci_tool.averaging_count_matches">averaging_count_matches</a></code></li>
+<li><code><a title="dcg_sci_tool.collect_pattern_files" href="#dcg_sci_tool.collect_pattern_files">collect_pattern_files</a></code></li>
+<li><code><a title="dcg_sci_tool.color_atoms_in_trajectory" href="#dcg_sci_tool.color_atoms_in_trajectory">color_atoms_in_trajectory</a></code></li>
+<li><code><a title="dcg_sci_tool.color_atoms_in_trajectory_multicolor" href="#dcg_sci_tool.color_atoms_in_trajectory_multicolor">color_atoms_in_trajectory_multicolor</a></code></li>
 <li><code><a title="dcg_sci_tool.construct_CO2_formation_FS" href="#dcg_sci_tool.construct_CO2_formation_FS">construct_CO2_formation_FS</a></code></li>
+<li><code><a title="dcg_sci_tool.construct_final_state" href="#dcg_sci_tool.construct_final_state">construct_final_state</a></code></li>
+<li><code><a title="dcg_sci_tool.create_categorical_heatmap" href="#dcg_sci_tool.create_categorical_heatmap">create_categorical_heatmap</a></code></li>
+<li><code><a title="dcg_sci_tool.create_categorical_heatmap_advanced" href="#dcg_sci_tool.create_categorical_heatmap_advanced">create_categorical_heatmap_advanced</a></code></li>
 <li><code><a title="dcg_sci_tool.create_filtered_structure" href="#dcg_sci_tool.create_filtered_structure">create_filtered_structure</a></code></li>
+<li><code><a title="dcg_sci_tool.create_workspace" href="#dcg_sci_tool.create_workspace">create_workspace</a></code></li>
+<li><code><a title="dcg_sci_tool.csv2xyz" href="#dcg_sci_tool.csv2xyz">csv2xyz</a></code></li>
+<li><code><a title="dcg_sci_tool.csv_to_tuples" href="#dcg_sci_tool.csv_to_tuples">csv_to_tuples</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_CO_CO2_molecules" href="#dcg_sci_tool.detect_CO_CO2_molecules">detect_CO_CO2_molecules</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_CO_coordinating_to_PdAu" href="#dcg_sci_tool.detect_CO_coordinating_to_PdAu">detect_CO_coordinating_to_PdAu</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_O2_coordinating_to_PdAu" href="#dcg_sci_tool.detect_O2_coordinating_to_PdAu">detect_O2_coordinating_to_PdAu</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_O2_molecules" href="#dcg_sci_tool.detect_O2_molecules">detect_O2_molecules</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_gas_molecules_for_deletion" href="#dcg_sci_tool.detect_gas_molecules_for_deletion">detect_gas_molecules_for_deletion</a></code></li>
+<li><code><a title="dcg_sci_tool.detect_nearby_ads_for_deletion" href="#dcg_sci_tool.detect_nearby_ads_for_deletion">detect_nearby_ads_for_deletion</a></code></li>
 <li><code><a title="dcg_sci_tool.detect_single_adsorbed_O" href="#dcg_sci_tool.detect_single_adsorbed_O">detect_single_adsorbed_O</a></code></li>
 <li><code><a title="dcg_sci_tool.extract_atom_types" href="#dcg_sci_tool.extract_atom_types">extract_atom_types</a></code></li>
+<li><code><a title="dcg_sci_tool.fast_extract_frames" href="#dcg_sci_tool.fast_extract_frames">fast_extract_frames</a></code></li>
+<li><code><a title="dcg_sci_tool.find_and_preprocess_input" href="#dcg_sci_tool.find_and_preprocess_input">find_and_preprocess_input</a></code></li>
+<li><code><a title="dcg_sci_tool.find_and_preprocess_input_no_ads" href="#dcg_sci_tool.find_and_preprocess_input_no_ads">find_and_preprocess_input_no_ads</a></code></li>
 <li><code><a title="dcg_sci_tool.find_cluster_surface_hollow_sites" href="#dcg_sci_tool.find_cluster_surface_hollow_sites">find_cluster_surface_hollow_sites</a></code></li>
 <li><code><a title="dcg_sci_tool.find_elements_exclusively_frames" href="#dcg_sci_tool.find_elements_exclusively_frames">find_elements_exclusively_frames</a></code></li>
 <li><code><a title="dcg_sci_tool.find_matching_files" href="#dcg_sci_tool.find_matching_files">find_matching_files</a></code></li>
 <li><code><a title="dcg_sci_tool.find_nearest_hollow_site" href="#dcg_sci_tool.find_nearest_hollow_site">find_nearest_hollow_site</a></code></li>
+<li><code><a title="dcg_sci_tool.float_to_viridis_rgb" href="#dcg_sci_tool.float_to_viridis_rgb">float_to_viridis_rgb</a></code></li>
+<li><code><a title="dcg_sci_tool.getEachfromXYZ" href="#dcg_sci_tool.getEachfromXYZ">getEachfromXYZ</a></code></li>
+<li><code><a title="dcg_sci_tool.get_Ea_dH_from_file" href="#dcg_sci_tool.get_Ea_dH_from_file">get_Ea_dH_from_file</a></code></li>
 <li><code><a title="dcg_sci_tool.get_OC_bonded_metal_atoms" href="#dcg_sci_tool.get_OC_bonded_metal_atoms">get_OC_bonded_metal_atoms</a></code></li>
 <li><code><a title="dcg_sci_tool.get_atoms_near_point" href="#dcg_sci_tool.get_atoms_near_point">get_atoms_near_point</a></code></li>
+<li><code><a title="dcg_sci_tool.get_atoms_with_specific_color" href="#dcg_sci_tool.get_atoms_with_specific_color">get_atoms_with_specific_color</a></code></li>
+<li><code><a title="dcg_sci_tool.get_detailed_MD_traj" href="#dcg_sci_tool.get_detailed_MD_traj">get_detailed_MD_traj</a></code></li>
 <li><code><a title="dcg_sci_tool.get_hollowSite_Au_Disperation" href="#dcg_sci_tool.get_hollowSite_Au_Disperation">get_hollowSite_Au_Disperation</a></code></li>
 <li><code><a title="dcg_sci_tool.get_hollowSite_outer_neighbors_with_subsurface" href="#dcg_sci_tool.get_hollowSite_outer_neighbors_with_subsurface">get_hollowSite_outer_neighbors_with_subsurface</a></code></li>
 <li><code><a title="dcg_sci_tool.get_hollowSite_outer_surface_neighbors" href="#dcg_sci_tool.get_hollowSite_outer_surface_neighbors">get_hollowSite_outer_surface_neighbors</a></code></li>
+<li><code><a title="dcg_sci_tool.get_indexes_symbols" href="#dcg_sci_tool.get_indexes_symbols">get_indexes_symbols</a></code></li>
 <li><code><a title="dcg_sci_tool.get_local_minima_sides_of_peak" href="#dcg_sci_tool.get_local_minima_sides_of_peak">get_local_minima_sides_of_peak</a></code></li>
 <li><code><a title="dcg_sci_tool.get_pdau_cluster_center" href="#dcg_sci_tool.get_pdau_cluster_center">get_pdau_cluster_center</a></code></li>
 <li><code><a title="dcg_sci_tool.get_pdau_surface_atoms" href="#dcg_sci_tool.get_pdau_surface_atoms">get_pdau_surface_atoms</a></code></li>
 <li><code><a title="dcg_sci_tool.get_reactants_ad_config" href="#dcg_sci_tool.get_reactants_ad_config">get_reactants_ad_config</a></code></li>
 <li><code><a title="dcg_sci_tool.get_reaction_local_atoms_list" href="#dcg_sci_tool.get_reaction_local_atoms_list">get_reaction_local_atoms_list</a></code></li>
+<li><code><a title="dcg_sci_tool.get_reaction_site_infos" href="#dcg_sci_tool.get_reaction_site_infos">get_reaction_site_infos</a></code></li>
 <li><code><a title="dcg_sci_tool.get_struct_focusing_reaction_site" href="#dcg_sci_tool.get_struct_focusing_reaction_site">get_struct_focusing_reaction_site</a></code></li>
+<li><code><a title="dcg_sci_tool.get_target_atoms_from_MD" href="#dcg_sci_tool.get_target_atoms_from_MD">get_target_atoms_from_MD</a></code></li>
+<li><code><a title="dcg_sci_tool.get_target_atoms_from_file" href="#dcg_sci_tool.get_target_atoms_from_file">get_target_atoms_from_file</a></code></li>
 <li><code><a title="dcg_sci_tool.get_traj_focusing_reaction_site" href="#dcg_sci_tool.get_traj_focusing_reaction_site">get_traj_focusing_reaction_site</a></code></li>
 <li><code><a title="dcg_sci_tool.get_traj_focusing_reaction_site_batches" href="#dcg_sci_tool.get_traj_focusing_reaction_site_batches">get_traj_focusing_reaction_site_batches</a></code></li>
+<li><code><a title="dcg_sci_tool.get_unique_values_csv" href="#dcg_sci_tool.get_unique_values_csv">get_unique_values_csv</a></code></li>
 <li><code><a title="dcg_sci_tool.get_xyz_prop_columns" href="#dcg_sci_tool.get_xyz_prop_columns">get_xyz_prop_columns</a></code></li>
 <li><code><a title="dcg_sci_tool.indexes2expression" href="#dcg_sci_tool.indexes2expression">indexes2expression</a></code></li>
+<li><code><a title="dcg_sci_tool.label_barrier_batches" href="#dcg_sci_tool.label_barrier_batches">label_barrier_batches</a></code></li>
+<li><code><a title="dcg_sci_tool.manual_name_xyz_png_at_nebdir" href="#dcg_sci_tool.manual_name_xyz_png_at_nebdir">manual_name_xyz_png_at_nebdir</a></code></li>
 <li><code><a title="dcg_sci_tool.mark_special_points" href="#dcg_sci_tool.mark_special_points">mark_special_points</a></code></li>
 <li><code><a title="dcg_sci_tool.merge_xyz" href="#dcg_sci_tool.merge_xyz">merge_xyz</a></code></li>
+<li><code><a title="dcg_sci_tool.mpirun_lammps" href="#dcg_sci_tool.mpirun_lammps">mpirun_lammps</a></code></li>
+<li><code><a title="dcg_sci_tool.neb_get_traj" href="#dcg_sci_tool.neb_get_traj">neb_get_traj</a></code></li>
+<li><code><a title="dcg_sci_tool.neb_post_process" href="#dcg_sci_tool.neb_post_process">neb_post_process</a></code></li>
+<li><code><a title="dcg_sci_tool.onekey_run_neb_normal" href="#dcg_sci_tool.onekey_run_neb_normal">onekey_run_neb_normal</a></code></li>
+<li><code><a title="dcg_sci_tool.onekey_run_neb_zbl" href="#dcg_sci_tool.onekey_run_neb_zbl">onekey_run_neb_zbl</a></code></li>
+<li><code><a title="dcg_sci_tool.ovito2atoms" href="#dcg_sci_tool.ovito2atoms">ovito2atoms</a></code></li>
 <li><code><a title="dcg_sci_tool.parse_nebTraj_file_name" href="#dcg_sci_tool.parse_nebTraj_file_name">parse_nebTraj_file_name</a></code></li>
+<li><code><a title="dcg_sci_tool.plot_basic_graph" href="#dcg_sci_tool.plot_basic_graph">plot_basic_graph</a></code></li>
+<li><code><a title="dcg_sci_tool.plot_neb_graph" href="#dcg_sci_tool.plot_neb_graph">plot_neb_graph</a></code></li>
 <li><code><a title="dcg_sci_tool.plot_scatter_color" href="#dcg_sci_tool.plot_scatter_color">plot_scatter_color</a></code></li>
+<li><code><a title="dcg_sci_tool.pre_del_ads" href="#dcg_sci_tool.pre_del_ads">pre_del_ads</a></code></li>
 <li><code><a title="dcg_sci_tool.pre_del_gases" href="#dcg_sci_tool.pre_del_gases">pre_del_gases</a></code></li>
 <li><code><a title="dcg_sci_tool.resultData2extxyz" href="#dcg_sci_tool.resultData2extxyz">resultData2extxyz</a></code></li>
 <li><code><a title="dcg_sci_tool.rotate_v1_around_p_to_v2" href="#dcg_sci_tool.rotate_v1_around_p_to_v2">rotate_v1_around_p_to_v2</a></code></li>
+<li><code><a title="dcg_sci_tool.run_each_neb_calculation" href="#dcg_sci_tool.run_each_neb_calculation">run_each_neb_calculation</a></code></li>
+<li><code><a title="dcg_sci_tool.run_initial_state_minimization" href="#dcg_sci_tool.run_initial_state_minimization">run_initial_state_minimization</a></code></li>
+<li><code><a title="dcg_sci_tool.run_neb_calculation_normal" href="#dcg_sci_tool.run_neb_calculation_normal">run_neb_calculation_normal</a></code></li>
+<li><code><a title="dcg_sci_tool.run_neb_calculation_zbl" href="#dcg_sci_tool.run_neb_calculation_zbl">run_neb_calculation_zbl</a></code></li>
+<li><code><a title="dcg_sci_tool.scatter_xyz" href="#dcg_sci_tool.scatter_xyz">scatter_xyz</a></code></li>
 <li><code><a title="dcg_sci_tool.split_xyz_by_elements" href="#dcg_sci_tool.split_xyz_by_elements">split_xyz_by_elements</a></code></li>
-<li><code><a title="dcg_sci_tool.sum_to_n" href="#dcg_sci_tool.sum_to_n">sum_to_n</a></code></li>
 <li><code><a title="dcg_sci_tool.traj2iniData" href="#dcg_sci_tool.traj2iniData">traj2iniData</a></code></li>
 <li><code><a title="dcg_sci_tool.translate_structure_center" href="#dcg_sci_tool.translate_structure_center">translate_structure_center</a></code></li>
 </ul>
